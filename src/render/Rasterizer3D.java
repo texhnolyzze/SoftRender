@@ -20,6 +20,7 @@ public class Rasterizer3D {
     private int temp_x, temp_y;
     private int code_1, code_2;
     private int line_x1, line_y1, line_x2, line_y2;
+    private float line_z1, line_z2;
     
     private float[] z_buff;
     
@@ -34,7 +35,7 @@ public class Rasterizer3D {
         clear_z_buffer();
     }
     
-    void drawTriangleWithoutShading(int x1, int y1, int z1, int x2, int y2, int z2, int x3, int y3, int z3, int rgb) {
+    void drawTriangleWithoutShading(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
         g.setColor(rgb);
         line(x1, y1, z1, x2, y2, z2);
         line(x2, y2, z2, x3, y3, z3);
@@ -46,15 +47,38 @@ public class Rasterizer3D {
         
     }
     
-    private void line(int x1, int y1, int z1, int x2, int y2, int z2) {
+    private void line(int x1, int y1, float z1, int x2, int y2, float z2) {
         code_1 = code(x1, y1);
         code_2 = code(x2, y2);
-        clip(x1, y1, x2, y2);
-        if (line_x1 != -1) 
-            bresenham(line_x1, line_y1, z1, line_x2, line_y2, z2);
+        clip(x1, y1, z1, x2, y2, z2);
+        if (line_x1 != -1) {
+            line_z1 = z1;
+            line_z2 = z2;
+            float src_len = -1.0f;
+            if (line_x1 != x1 || line_y1 != y1) {
+                src_len = len(x1, y1, x2, y2);
+                float dx_clipped = line_x1 - x1;
+                float dy_clipped = line_y1 - y1;
+                line_z1 = (float) (z1 + (z2 - z1) * Math.sqrt(dx_clipped * dx_clipped + dy_clipped * dy_clipped) / src_len);
+            } 
+            if (line_x2 != x2 || line_y2 != y2) {
+                if (src_len == -1.0f) 
+                    src_len = len(x1, y1, x2, y2);
+                float dx_clipped = line_x2 - x1;
+                float dy_clipped = line_y2 - y1;
+                line_z2 = (float) (z1 + (z2 - z1) * Math.sqrt(dx_clipped * dx_clipped + dy_clipped * dy_clipped) / src_len);
+            }
+            bresenham(line_x1, line_y1, line_z1, line_x2, line_y2, line_z2);
+        }
     }
     
-    private void bresenham(int x1, int y1, int z1, int x2, int y2, int z2) {
+    private static float len(int x1, int y1, int x2, int y2) {
+        int dx = x2 - x1;
+        int dy = y2 - y1;
+        return (float) Math.sqrt(dx * dx + dy * dy);
+    }
+    
+    private void bresenham(int x1, int y1, float z1, int x2, int y2, float z2) {
         if (x1 == x2) { // vertical line
             if (y1 == y2) {
                 int i = index(x1, y1);
@@ -191,7 +215,7 @@ public class Rasterizer3D {
         }
     }
     
-    private void clip(int x1, int y1, int x2, int y2) {
+    private void clip(int x1, int y1, float z1, int x2, int y2, float z2) {
         for (;;) {
             if ((code_1 | code_2) == 0) {
                 line_x1 = x1;
