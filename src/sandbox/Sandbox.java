@@ -50,7 +50,7 @@ public class Sandbox {
         G g = new G();
         Rasterizer3D r = new Rasterizer3D(g);
         long t = System.nanoTime();
-        r.drawTriangleGouraudShading(320, 0, 0, rgb(255, 0, 0), 371, 400, 0, rgb(0, 255, 0), 100, 200, 0, rgb(0, 0, 255));
+        r.drawTriangleGouraudShading(320, -100, 0, rgb(255, 0, 0), -100, 400, 0, rgb(0, 255, 0), 700, 500, 0, rgb(0, 0, 255));
         long dt = System.nanoTime() - t;
         System.out.println(dt);
         ImageIO.write(g.img, "jpg", new File("1.jpg"));

@@ -27,6 +27,7 @@ public final class Rasterizer3D {
     private int code_1, code_2;
     private int line_x1, line_y1, line_x2, line_y2;
     private float line_z1, line_z2;
+    private float line_r1, line_g1, line_b1, line_r2, line_g2, line_b2;
     
     private float[] z_buff;
     private float[] sqrt_table;
@@ -132,10 +133,12 @@ public final class Rasterizer3D {
             int rx = round(wx2);
             clip(lx, y, rx, y);
             if (line_x1 != -1) { // scanline is outside the screen
+                line_z1 = lz;
+                line_z2 = rz;
                 if (line_x1 != lx) 
-                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
+                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
                 if (line_x2 != rx) 
-                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
+                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
                 hor_line(line_x1, line_z1, line_x2, line_z2, y);
             }
             wx1 += dx13;
@@ -162,10 +165,12 @@ public final class Rasterizer3D {
             int rx = round(wx2);
             clip(lx, y, rx, y);
             if (line_x1 != -1) {
+                line_z1 = lz;
+                line_z2 = rz;
                 if (line_x1 != lx)
-                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
+                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
                 if (line_x2 != rx)
-                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
+                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
                 hor_line(line_x1, line_z1, line_x2, line_z2, y);
             }
             wx1 += _dx13;
@@ -278,14 +283,30 @@ public final class Rasterizer3D {
             int lx = round(wx1);
             int rx = round(wx2);
             clip(lx, y, rx, y);
-            if (line_x1 != -1) { // scanline is outside the screen
-                if (line_x1 != lx) 
-                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
-                if (line_x2 != rx) 
-                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
-                hor_line_interpolate_color(y, line_x1, line_z1, lr, 
-                                           lg, lb, line_x2, 
-                                           line_z2, rr, rg, rb);
+            if (line_x1 != -1) {
+                line_z1 = lz;
+                line_z2 = rz;
+                line_r1 = lr;
+                line_g1 = lg;
+                line_b1 = lb;
+                line_r2 = rr;
+                line_g2 = rg;
+                line_b2 = rb;
+                if (line_x1 != lx) {
+                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
+                    line_r1 = new_val(lr, rr, line_x1 - lx, rx - lx);
+                    line_g1 = new_val(lg, rg, line_x1 - lx, rx - lx);
+                    line_b1 = new_val(lb, rb, line_x1 - lx, rx - lx);
+                }
+                if (line_x2 != rx) {
+                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
+                    line_r2 = new_val(rr, lr, rx - line_x2, rx - lx);
+                    line_g2 = new_val(rg, lg, rx - line_x2, rx - lx);
+                    line_b2 = new_val(rb, lb, rx - line_x2, rx - lx);
+                }
+                hor_line_interpolate_color(y, line_x1, line_z1, line_r1, 
+                                           line_g1, line_b1, line_x2, 
+                                           line_z2, line_r2, line_g2, line_b2);
             }
             wx1 += dx13;
             wx2 += dx12;
@@ -327,13 +348,29 @@ public final class Rasterizer3D {
             int rx = round(wx2);
             clip(lx, y, rx, y);
             if (line_x1 != -1) {
-                if (line_x1 != lx)
-                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
-                if (line_x2 != rx)
-                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
-                hor_line_interpolate_color(y, line_x1, line_z1, lr, 
-                                           lg, lb, line_x2, 
-                                           line_z2, rr, rg, rb);
+                line_z1 = lz;
+                line_z2 = rz;
+                line_r1 = lr;
+                line_g1 = lg;
+                line_b1 = lb;
+                line_r2 = rr;
+                line_g2 = rg;
+                line_b2 = rb;
+                if (line_x1 != lx) {
+                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
+                    line_r1 = new_val(lr, rr, line_x1 - lx, rx - lx);
+                    line_g1 = new_val(lg, rg, line_x1 - lx, rx - lx);
+                    line_b1 = new_val(lb, rb, line_x1 - lx, rx - lx);
+                }
+                if (line_x2 != rx) {
+                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
+                    line_r2 = new_val(rr, lr, rx - line_x2, rx - lx);
+                    line_g2 = new_val(rg, lg, rx - line_x2, rx - lx);
+                    line_b2 = new_val(rb, lb, rx - line_x2, rx - lx);
+                }
+                hor_line_interpolate_color(y, line_x1, line_z1, line_r1, 
+                                           line_g1, line_b1, line_x2, 
+                                           line_z2, line_r2, line_g2, line_b2);
             }
             wx1 += _dx13;
             wx2 += dx23;
@@ -351,7 +388,7 @@ public final class Rasterizer3D {
     private void hor_line_interpolate_color(int y, int x1, float z1, float r1, float g1, float b1, int x2, float z2, float r2, float g2, float b2) {
         int i = index(x1, y);
         float z = z1;
-        int dx = max(1, x2 - x1);
+        float dx = max(1, x2 - x1);
         final float dz = (z2 - z1) / dx;
         final float dr = (r2 - r1) / dx;
         final float dg = (g2 - g1) / dx;
@@ -380,23 +417,23 @@ public final class Rasterizer3D {
             float src_len = -1.0f;
             if (line_x1 != x1 || line_y1 != y1) {
                 src_len = len(x1, y1, x2, y2);
-                line_z1 = new_z(x1, y1, line_x1, line_y1, z1, z2, src_len);
+                line_z1 = new_val(x1, y1, line_x1, line_y1, z1, z2, src_len);
             }
             if (line_x2 != x2 || line_y2 != y2) {
                 if (src_len == -1.0f) 
                     src_len = len(x1, y1, x2, y2);
-                line_z2 = new_z(x2, y2, line_x2, line_y2, z2, z1, src_len);
+                line_z2 = new_val(x2, y2, line_x2, line_y2, z2, z1, src_len);
             }
             bresenham(line_x1, line_y1, line_z1, line_x2, line_y2, line_z2);
         }
     }
     
-    private float new_z(int old_x, int old_y, int clipped_x, int clipped_y, float z1, float z2, float src_len) {
-        return (float) (z1 + (z2 - z1) * len(old_x, old_y, clipped_x, clipped_y) / src_len);
+    private float new_val(int old_x, int old_y, int clipped_x, int clipped_y, float v1, float v2, float old_len) {
+        return v1 + (v2 - v1) * len(old_x, old_y, clipped_x, clipped_y) / old_len;
     }
     
-    private float new_z(float z1, float z2, float new_len, float src_len) {
-        return (float) (z1 + (z2 - z1) * new_len / src_len);
+    private float new_val(float v1, float v2, float new_len, float old_len) {
+        return v1 + (v2 - v1) * new_len / old_len;
     }
     
     private void bresenham(int x1, int y1, float z1, int x2, int y2, float z2) {
