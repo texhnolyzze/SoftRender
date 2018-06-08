@@ -59,6 +59,26 @@ public final class Rasterizer3D {
             z_buff[i] = Float.POSITIVE_INFINITY;
     }
     
+    public void drawZBuffer(Graphics g) {
+        if (w < g.getWidth() || h < g.getHeight())
+            return;
+        float min = Float.POSITIVE_INFINITY, max = Float.NEGATIVE_INFINITY;
+        for (int i = 0; i < z_buff.length; i++) {
+            if (z_buff[i] < min) min = z_buff[i];
+            if (z_buff[i] > max && z_buff[i] != Float.POSITIVE_INFINITY) max = z_buff[i];
+        }
+        if (min == Float.POSITIVE_INFINITY) { // z_buffer is empty.
+            for (int i = 0; i < z_buff.length; i++) 
+                g.plot(i, i, Graphics.BLACK);
+        } else {
+            float dz = max - min;
+            for (int i = 0; i < z_buff.length; i++) {
+                int gray = (int) (255f * (z_buff[i] / dz));
+                g.plot(i % w, i / w, rgb(gray, gray, gray));
+            }
+        }
+    }
+    
     public void drawTriangleWireframe(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
         g.setColor(rgb);
         line(x1, y1, z1, x2, y2, z2);
@@ -396,10 +416,10 @@ public final class Rasterizer3D {
         float r = r1, g = g1, b = b1;
         for (int x = x1;;) {
             if (z_buff[i] > z) {
-                this.g.plot(x++, y, rgb(roundPositive(r), roundPositive(g), roundPositive(b)));
+                this.g.plot(x, y, rgb(roundPositive(r), roundPositive(g), roundPositive(b)));
                 z_buff[i] = z;
             }
-            if (x > x2)
+            if (++x > x2)
                 break;
             z += dz;
             r += dr;
@@ -485,10 +505,10 @@ public final class Rasterizer3D {
         final float dz = (z2 - z1) / (y2 - y1);
         for (int y = y1;;) {
             if (z_buff[i] > z) {
-                g.plot(x, y++);
+                g.plot(x, y);
                 z_buff[i] = z;
             }
-            if (y > y2)
+            if (++y > y2)
                 break;
             i += w;
             z += dz;
@@ -501,10 +521,10 @@ public final class Rasterizer3D {
         final float dz = (z2 - z1) / (x2 - x1);
         for (int x = x1;;) {
             if (z_buff[i] > z) {
-                g.plot(x++, y);
+                g.plot(x, y);
                 z_buff[i] = z;
             }
-            if (x > x2)
+            if (++x > x2)
                 break;
             z += dz;
             i++;
@@ -518,10 +538,10 @@ public final class Rasterizer3D {
         final float dz = SQRT_2 * (z2 - z1) / sqrt_table[index(dx, dx)];
         for (int x = x1, y = y1;;) {
             if (z_buff[i] > z) {
-                g.plot(x++, y);
+                g.plot(x, y);
                 z_buff[i] = z;
             }
-            if (x > x2)
+            if (++x > x2)
                 break;
             y += y_inc;
             z += dz;
@@ -537,10 +557,10 @@ public final class Rasterizer3D {
         final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
         for (int x = x1, y = y1, err = 0;;) {
             if (z_buff[i] > z) {
-                g.plot(x++, y);
+                g.plot(x, y);
                 z_buff[i] = z;
             }
-            if (x > x2)
+            if (++x > x2)
                 break;
             i++;
             _dx++;
@@ -562,10 +582,10 @@ public final class Rasterizer3D {
         final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
         for (int y = y1, x = x1, err = 0;;) {
             if (z_buff[i] > z) {
-                g.plot(x, y++);
+                g.plot(x, y);
                 z_buff[i] = z;
             }
-            if (y > y2)
+            if (++y > y2)
                 break;
             _dy++;
             i += w;
@@ -644,21 +664,21 @@ public final class Rasterizer3D {
     
     private void x_less_0(float x, float y, float rx, float ry) {
         temp_x = 0;
-        temp_y = (int) round(ry + (y - ry) * -(rx / (x - rx)));
+        temp_y = round(ry + (y - ry) * -(rx / (x - rx)));
     }
 
     private void y_less_0(float x, float y, float rx, float ry) {
-        temp_x = (int) round(rx + (x - rx) * -(ry / (y - ry)));
+        temp_x = round(rx + (x - rx) * -(ry / (y - ry)));
         temp_y = 0;
     }
 
     private void x_greater_max_x(float x, float y, float rx, float ry) {
         temp_x = x_max;
-        temp_y = (int) round(ry + (y - ry) * ((x_max - rx) / (x - rx)));
+        temp_y = round(ry + (y - ry) * ((x_max - rx) / (x - rx)));
     }
 
     private void y_greater_max_y(float x, float y, float rx, float ry) {
-        temp_x = (int) round(rx + (x - rx) * ((y_max - ry) / (y - ry)));
+        temp_x = round(rx + (x - rx) * ((y_max - ry) / (y - ry)));
         temp_y = y_max;
     }
     
