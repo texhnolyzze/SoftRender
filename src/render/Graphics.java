@@ -6,6 +6,9 @@ package render;
  */
 public interface Graphics {
     
+    // Color format is:
+    // most bit -> (--------RRRRRRRRGGGGGGGGBBBBBBBB) <- least bit
+    
     int getWidth();
     int getHeight();
     
@@ -19,6 +22,18 @@ public interface Graphics {
     
     public static int rgb(int r, int g, int b) {
         return ((r << 16) | (g << 8)) | b;
+    }
+    
+    public static int red(int rgb) {
+        return (rgb & 0xff0000) >> 16;
+    }
+    
+    public static int green(int rgb) {
+        return (rgb & 0xff00) >> 8;
+    }
+    
+    public static int blue(int rgb) {
+        return (rgb & 0xff);
     }
     
 }

@@ -1,5 +1,8 @@
 package render;
 
+import static render.Graphics.*;
+import static render.FastMath.*;
+
 /**
  *
  * @author Texhnolyze
@@ -17,6 +20,8 @@ public final class Rasterizer3D {
     private int x_max, y_max;
     
     private int temp_x, temp_y;
+    
+    private int temp_int;
     private float temp_float;
     
     private int code_1, code_2;
@@ -43,7 +48,7 @@ public final class Rasterizer3D {
             x_max = w - 1;
             y_max = h - 1;
             z_buff = new float[w * h];
-            sqrt_table = FastMath.buildSqrtTable(w, h);
+            sqrt_table = buildSqrtTable(w, h);
             clearZBuffer();
         }
     }
@@ -123,8 +128,8 @@ public final class Rasterizer3D {
         float lz = z1, rz = z1;
         float wx1 = x1, wx2 = x1;
         for (int y = y1; y < y2; y++) {
-            int lx = FastMath.round(wx1);
-            int rx = FastMath.round(wx2);
+            int lx = round(wx1);
+            int rx = round(wx2);
             clip(lx, y, rx, y);
             if (line_x1 != -1) { // scanline is outside the screen
                 if (line_x1 != lx) 
@@ -153,8 +158,8 @@ public final class Rasterizer3D {
             dz23 = temp_float;
         }
         for (int y = y2; y <= y3; y++) {
-            int lx = FastMath.round(wx1);
-            int rx = FastMath.round(wx2);
+            int lx = round(wx1);
+            int rx = round(wx2);
             clip(lx, y, rx, y);
             if (line_x1 != -1) {
                 if (line_x1 != lx)
@@ -170,6 +175,203 @@ public final class Rasterizer3D {
         }
     }
     
+    
+    public void drawTriangleGouraudShading(int x1, int y1, float z1, int rgb1, int x2, int y2, float z2, int rgb2, int x3, int y3, float z3, int rgb3) {
+        if (y3 < y2) {
+            temp_x = x3;
+            temp_y = y3;
+            temp_float = z3;
+            temp_int = rgb3;
+            x3 = x2;
+            y3 = y2;
+            z3 = z2;
+            rgb3 = rgb2;
+            x2 = temp_x;
+            y2 = temp_y;
+            z2 = temp_float;
+            rgb2 = temp_int;
+        }
+        if (y3 < y1) {
+            temp_x = x3;
+            temp_y = y3;
+            temp_float = z3;
+            temp_int = rgb3;
+            x3 = x1;
+            y3 = y1;
+            z3 = z1;
+            rgb3 = rgb1;
+            x1 = temp_x;
+            y1 = temp_y;
+            z1 = temp_float;
+            rgb1 = temp_int;
+        }
+        if (y2 < y1) {
+            temp_x = x2;
+            temp_y = y2;
+            temp_float = z2;
+            temp_int = rgb2;
+            x2 = x1;
+            y2 = y1;
+            z2 = z1;
+            rgb2 = rgb1;
+            x1 = temp_x;
+            y1 = temp_y;
+            z1 = temp_float;
+            rgb1 = temp_int;
+        }
+        float dx13 = 0f, dx12 = 0f, dx23 = 0f;
+        float dz13 = 0f, dz12 = 0f, dz23 = 0f;
+        float dr13 = 0f, dr12 = 0f, dr23 = 0f;
+        float dg13 = 0f, dg12 = 0f, dg23 = 0f;
+        float db13 = 0f, db12 = 0f, db23 = 0f;
+        if (y3 != y1) {
+            float dy = y3 - y1;
+            dx13 = (float) (x3 - x1) / dy;
+            dz13 = (z3 - z1) / dy;
+            dr13 = ((float) red(rgb3) - red(rgb1)) / dy;
+            dg13 = ((float) green(rgb3) - green(rgb1)) / dy;
+            db13 = ((float) blue(rgb3) - blue(rgb1)) / dy;
+        }
+        if (y2 != y1) {
+            float dy = y2 - y1;
+            dx12 = (float) (x2 - x1) / dy;
+            dz12 = (z2 - z1) / dy;
+            dr12 = ((float) red(rgb2) - red(rgb1)) / dy;
+            dg12 = ((float) green(rgb2) - green(rgb1)) / dy;
+            db12 = ((float) blue(rgb2) - blue(rgb1)) / dy;
+        }
+        if (y3 != y2) {
+            float dy = y3 - y2;
+            dx23 = (float) (x3 - x2) / dy;
+            dz23 = (z3 - z2) / dy;
+            dr23 = ((float) red(rgb3) - red(rgb2)) / dy;
+            dg23 = ((float) green(rgb3) - green(rgb2)) / dy;
+            db23 = ((float) blue(rgb3) - blue(rgb2)) / dy;
+        }
+        float _dx13 = dx13;
+        float _dz13 = dz13;
+        float _dr13 = dr13;
+        float _dg13 = dg13;
+        float _db13 = db13;
+        if (dx13 > dx12) {
+            temp_float = dx13;
+            dx13 = dx12;
+            dx12 = temp_float;
+            temp_float = dz13;
+            dz13 = dz12;
+            dz12 = temp_float;
+            temp_float = dr13;
+            dr13 = dr12;
+            dr12 = temp_float;
+            temp_float = dg13;
+            dg13 = dg12;
+            dg12 = temp_float;
+            temp_float = db13;
+            db13 = db12;
+            db12 = temp_float;
+        }
+        float lz = z1, rz = z1;
+        float wx1 = x1, wx2 = x1;
+        float lr = red(rgb1), lg = green(rgb1), lb = blue(rgb1);
+        float rr = lr, rg = lg, rb = lb;
+        for (int y = y1; y < y2; y++) {
+            int lx = round(wx1);
+            int rx = round(wx2);
+            clip(lx, y, rx, y);
+            if (line_x1 != -1) { // scanline is outside the screen
+                if (line_x1 != lx) 
+                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
+                if (line_x2 != rx) 
+                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
+                hor_line_interpolate_color(y, line_x1, line_z1, lr, 
+                                           lg, lb, line_x2, 
+                                           line_z2, rr, rg, rb);
+            }
+            wx1 += dx13;
+            wx2 += dx12;
+            lz += dz13;
+            rz += dz12;
+            lr += dr13;
+            lg += dg13;
+            lb += db13;
+            rr += dr12;
+            rg += dg12;
+            rb += db12;
+        }
+        if (y1 == y2) {
+            wx2 = x2;
+            rz = z2;
+            rr = red(rgb2);
+            rg = green(rgb2);
+            rb = blue(rgb2);
+        }
+        if (_dx13 < dx23) {
+            temp_float = _dx13;
+            _dx13 = dx23;
+            dx23 = temp_float;
+            temp_float = _dz13;
+            _dz13 = dz23;
+            dz23 = temp_float;
+            temp_float = _dr13;
+            _dr13 = dr23;
+            dr23 = temp_float;
+            temp_float = _dg13;
+            _dg13 = dg23;
+            dg23 = temp_float;
+            temp_float = _db13;
+            _db13 = db23;
+            db23 = temp_float;
+        }
+        for (int y = y2; y <= y3; y++) {
+            int lx = round(wx1);
+            int rx = round(wx2);
+            clip(lx, y, rx, y);
+            if (line_x1 != -1) {
+                if (line_x1 != lx)
+                    line_z1 = new_z(lz, rz, line_x2 - line_x1, rx - lx);
+                if (line_x2 != rx)
+                    line_z2 = new_z(rz, lz, line_x2 - line_x1, rx - lx);
+                hor_line_interpolate_color(y, line_x1, line_z1, lr, 
+                                           lg, lb, line_x2, 
+                                           line_z2, rr, rg, rb);
+            }
+            wx1 += _dx13;
+            wx2 += dx23;
+            lz += _dz13;
+            rz += dz23;
+            lr += _dr13;
+            lg += _dg13;
+            lb += _db13;
+            rr += dr23;
+            rg += dg23;
+            rb += db23;
+        }
+    }
+    
+    private void hor_line_interpolate_color(int y, int x1, float z1, float r1, float g1, float b1, int x2, float z2, float r2, float g2, float b2) {
+        int i = index(x1, y);
+        float z = z1;
+        int dx = max(1, x2 - x1);
+        final float dz = (z2 - z1) / dx;
+        final float dr = (r2 - r1) / dx;
+        final float dg = (g2 - g1) / dx;
+        final float db = (b2 - b1) / dx;
+        float r = r1, g = g1, b = b1;
+        for (int x = x1;;) {
+            if (z_buff[i] > z) {
+                this.g.plot(x++, y, rgb(roundPositive(r), roundPositive(g), roundPositive(b)));
+                z_buff[i] = z;
+            }
+            if (x > x2)
+                break;
+            z += dz;
+            r += dr;
+            g += dg;
+            b += db;
+            i++;
+        }
+    }
+    
     public void line(int x1, int y1, float z1, int x2, int y2, float z2) {
         clip(x1, y1, x2, y2);
         if (line_x1 != -1) {
@@ -177,12 +379,12 @@ public final class Rasterizer3D {
             line_z2 = z2;
             float src_len = -1.0f;
             if (line_x1 != x1 || line_y1 != y1) {
-                src_len = FastMath.len(x1, y1, x2, y2);
+                src_len = len(x1, y1, x2, y2);
                 line_z1 = new_z(x1, y1, line_x1, line_y1, z1, z2, src_len);
-            } 
+            }
             if (line_x2 != x2 || line_y2 != y2) {
                 if (src_len == -1.0f) 
-                    src_len = FastMath.len(x1, y1, x2, y2);
+                    src_len = len(x1, y1, x2, y2);
                 line_z2 = new_z(x2, y2, line_x2, line_y2, z2, z1, src_len);
             }
             bresenham(line_x1, line_y1, line_z1, line_x2, line_y2, line_z2);
@@ -190,7 +392,7 @@ public final class Rasterizer3D {
     }
     
     private float new_z(int old_x, int old_y, int clipped_x, int clipped_y, float z1, float z2, float src_len) {
-        return (float) (z1 + (z2 - z1) * FastMath.len(old_x, old_y, clipped_x, clipped_y) / src_len);
+        return (float) (z1 + (z2 - z1) * len(old_x, old_y, clipped_x, clipped_y) / src_len);
     }
     
     private float new_z(float z1, float z2, float new_len, float src_len) {
@@ -276,7 +478,7 @@ public final class Rasterizer3D {
         int i = index(x1, y1);
         float z = z1;
         int dx = x2 - x1;
-        final float dz = FastMath.SQRT_2 * (z2 - z1) / sqrt_table[index(dx, dx)];
+        final float dz = SQRT_2 * (z2 - z1) / sqrt_table[index(dx, dx)];
         for (int x = x1, y = y1;;) {
             if (z_buff[i] > z) {
                 g.plot(x++, y);
@@ -293,7 +495,7 @@ public final class Rasterizer3D {
     private void x_line(int x1, int y1, float z1, int x2, float z2, int dx, int dy, final int y_inc) {
         int n = w * y_inc;
         int i = index(x1, y1);
-        int _dx = 0, _dy = 0, abs_dy = 0;
+        int _dx = 0, _dy = 0;
         float z = z1;
         final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
         for (int x = x1, y = y1, err = 0;;) {
@@ -308,18 +510,17 @@ public final class Rasterizer3D {
             err += dy;
             if (err << 1 >= dx) {
                 y += y_inc;
-                _dy += y_inc;
-                abs_dy++;
+                _dy++;
                 i += n;
                 err -= dx;
             } 
-            z = z1 + dz * sqrt_table[index(_dx, abs_dy)];
+            z = z1 + dz * sqrt_table[index(_dx, _dy)];
         }
     }
     
     private void y_line(int x1, int y1, float z1, int y2, float z2, int dx, int dy, final int x_inc) {
         int i = index(x1, y1);
-        int _dx = 0, _dy = 0, abs_dx = 0;
+        int _dy = 0, _dx = 0;
         float z = z1;
         final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
         for (int y = y1, x = x1, err = 0;;) {
@@ -334,12 +535,11 @@ public final class Rasterizer3D {
             err += dx;
             if (err << 1 >= dy) {
                 x += x_inc;
-                _dx += x_inc;
-                abs_dx++;
+                _dx++;
                 i += x_inc;
                 err -= dy;
             }
-            z = z1 + dz * sqrt_table[index(abs_dx, _dy)];
+            z = z1 + dz * sqrt_table[index(_dx, _dy)];
         }
     }
     
@@ -407,21 +607,21 @@ public final class Rasterizer3D {
     
     private void x_less_0(float x, float y, float rx, float ry) {
         temp_x = 0;
-        temp_y = (int) FastMath.round(ry + (y - ry) * -(rx / (x - rx)));
+        temp_y = (int) round(ry + (y - ry) * -(rx / (x - rx)));
     }
 
     private void y_less_0(float x, float y, float rx, float ry) {
-        temp_x = (int) FastMath.round(rx + (x - rx) * -(ry / (y - ry)));
+        temp_x = (int) round(rx + (x - rx) * -(ry / (y - ry)));
         temp_y = 0;
     }
 
     private void x_greater_max_x(float x, float y, float rx, float ry) {
         temp_x = x_max;
-        temp_y = (int) FastMath.round(ry + (y - ry) * ((x_max - rx) / (x - rx)));
+        temp_y = (int) round(ry + (y - ry) * ((x_max - rx) / (x - rx)));
     }
 
     private void y_greater_max_y(float x, float y, float rx, float ry) {
-        temp_x = (int) FastMath.round(rx + (x - rx) * ((y_max - ry) / (y - ry)));
+        temp_x = (int) round(rx + (x - rx) * ((y_max - ry) / (y - ry)));
         temp_y = y_max;
     }
     

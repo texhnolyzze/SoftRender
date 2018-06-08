@@ -6,7 +6,7 @@ package render;
  */
 public final class FastMath {
     
-    public static float[] buildSqrtTable(int w, int h) {
+    static float[] buildSqrtTable(int w, int h) {
         float[] table = new float[w * h];
         for (int x = 0; x < w; x++) {
             for (int y = 0; y < h; y++) {
@@ -38,6 +38,15 @@ public final class FastMath {
     
     static float sqrt(float x) {
         return (float) Math.sqrt(x);
+    }
+    
+    //  stolen from: https://gist.github.com/leodutra/63ca94fe86dcffee1bab
+    static int min(int a, int b) {
+        return a - ((a - b) & ((b - a) >> 31));
+    }
+    
+    static int max(int a, int b) {
+        return -min(-a, -b);
     }
     
 }

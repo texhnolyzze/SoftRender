@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import javax.imageio.ImageIO;
 import render.Graphics;
+import static render.Graphics.rgb;
 import render.Rasterizer3D;
 
 /**
@@ -48,7 +49,10 @@ public class Sandbox {
     public static void main(String[] args) throws IOException {
         G g = new G();
         Rasterizer3D r = new Rasterizer3D(g);
-        r.drawTriangleFlatShading(-1000, 0, 5, -1000, 300, 152, 543, 123, 0, 16581000);
+        long t = System.nanoTime();
+        r.drawTriangleGouraudShading(320, 0, 0, rgb(255, 0, 0), 371, 400, 0, rgb(0, 255, 0), 100, 200, 0, rgb(0, 0, 255));
+        long dt = System.nanoTime() - t;
+        System.out.println(dt);
         ImageIO.write(g.img, "jpg", new File("1.jpg"));
     }
     
