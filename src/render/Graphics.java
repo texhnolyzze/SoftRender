@@ -43,7 +43,7 @@ public interface Graphics {
     
     public static class DefaultGraphics implements Graphics {
 
-        public int defaultRGB;
+        private int defaultRGB;
         
         private int w;
         private int h;
@@ -75,6 +75,14 @@ public interface Graphics {
         @Override
         public void setColor(int rgb) {
             this.rgb = rgb;
+        }
+        
+        public int getDefaultColor() {
+            return defaultRGB;
+        }
+        
+        public void setDefaultColor(int rgb) {
+            this.defaultRGB = rgb;
         }
 
         @Override

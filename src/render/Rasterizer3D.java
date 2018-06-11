@@ -1,7 +1,7 @@
 package render;
 
 import static render.Graphics.*;
-import static render.FastMath.*;
+import static render.MathUtils.*;
 
 /**
  *
@@ -16,7 +16,7 @@ public final class Rasterizer3D {
     
     private final Graphics g;
     
-    private int w, h, w_plus_one;
+    private int w, h;
     private int x_max, y_max;
     
     private int temp_x, temp_y;
@@ -45,7 +45,6 @@ public final class Rasterizer3D {
         if (g.getWidth() != w || g.getHeight() != h) {
             w = g.getWidth();
             h = g.getHeight();
-            w_plus_one = w + 1;
             x_max = w - 1;
             y_max = h - 1;
             z_buff = new float[w * h];
@@ -436,20 +435,20 @@ public final class Rasterizer3D {
             line_z2 = z2;
             float src_len = -1.0f;
             if (line_x1 != x1 || line_y1 != y1) {
-                src_len = len(x1, y1, x2, y2);
+                src_len = dist(x1, y1, x2, y2);
                 line_z1 = new_val(x1, y1, line_x1, line_y1, z1, z2, src_len);
             }
             if (line_x2 != x2 || line_y2 != y2) {
                 if (src_len == -1.0f) 
-                    src_len = len(x1, y1, x2, y2);
+                    src_len = dist(x1, y1, x2, y2);
                 line_z2 = new_val(x2, y2, line_x2, line_y2, z2, z1, src_len);
             }
             bresenham(line_x1, line_y1, line_z1, line_x2, line_y2, line_z2);
-        }
+        } 
     }
     
     private float new_val(int old_x, int old_y, int clipped_x, int clipped_y, float v1, float v2, float old_len) {
-        return v1 + (v2 - v1) * len(old_x, old_y, clipped_x, clipped_y) / old_len;
+        return v1 + (v2 - v1) * dist(old_x, old_y, clipped_x, clipped_y) / old_len;
     }
     
     private float new_val(float v1, float v2, float new_len, float old_len) {
@@ -484,18 +483,83 @@ public final class Rasterizer3D {
                 z2 = temp_float;
             }
             int dx = x2 - x1, dy;
-            if (y2 > y1) {
-                dy = y2 - y1;    
-                if (dx > dy)      x_line(x1, y1, z1, x2, z2, dx, dy, 1);
+            if (y1 < y2) {
+                dy = y2 - y1;
+                if (dx > dy) x_line(x1, y1, z1, x2, z2, dx, dy, 1);
                 else if (dx < dy) y_line(x1, y1, z1, y2, z2, dx, dy, 1);
-                else              line_45(x1, y1, z1, x2, z2, 1);
-                
+                else line_45(x1, y1, z1, x2, z2, 1);
             } else {
                 dy = y1 - y2;
-                if (dx > dy)      x_line(x1, y1, z1, x2, z2, dx, dy, -1);
+                if (dx > dy) x_line(x1, y1, z1, x2, z2, dx, dy, -1);
                 else if (dx < dy) y_line(x1, y1, z1, y2, z2, dx, dy, -1);
-                else              line_45(x1, y1, z1, x2, z2, -1);
+                else line_45(x1, y1, z1, x2, z2, -1);
             }
+        }
+    }
+    
+//  x1 < x2
+    private void x_line(int x1, int y1, float z1, int x2, float z2, int dx, int dy, final int y_inc) {
+        int i = index(x1, y1);
+        int _dx = 0, _dy = 0;
+        float z = z1;
+        final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
+        for (int x = x1, y = y1, err = 0;;) {
+            if (z_buff[i] > z) {
+                g.plot(x, y);
+                z_buff[i] = z;
+            }
+            if (++x > x2)
+                break;
+            i++;
+            _dx++;
+            err += dy;
+            if (err << 1 >= dx) {
+                _dy++;
+                err -= dx;
+                y += y_inc;
+                i += y_inc * w;
+            } 
+            z = z1 + dz * sqrt_table[index(_dx, _dy)];
+        } 
+    }
+    
+    private void y_line(int x1, int y1, float z1, int y2, float z2, int dx, int dy, final int y_inc) {
+        int i = index(x1, y1);
+        int _dy = 0, _dx = 0;
+        float z = z1;
+        final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
+        for (int y = y1, x = x1, err = 0;;) {
+            if (z_buff[i] > z) {
+                g.plot(x, y);
+                z_buff[i] = z;
+            }
+            y += y_inc;
+            if (y == y2) {
+                _dy++;
+                err += dx;
+                i += y_inc * w;
+                if (err << 1 >= dy) {
+                    x++;
+                    i++;
+                    _dx++;
+                }
+                z = z1 + dz * sqrt_table[index(_dx, _dy)];
+                if (z_buff[i] > z) {
+                    g.plot(x, y);
+                    z_buff[i] = z;
+                }
+                return;
+            }
+            _dy++;
+            err += dx;
+            i += y_inc * w;
+            if (err << 1 >= dy) {
+                x++;
+                i++;
+                _dx++;
+                err -= dy;
+            }
+            z = z1 + dz * sqrt_table[index(_dx, _dy)];
         }
     }
     
@@ -531,7 +595,7 @@ public final class Rasterizer3D {
         }
     }
     
-    private void line_45(int x1, int y1, float z1, int x2, float z2, final int y_inc) {
+    private void line_45(int x1, int y1, float z1, int x2, float z2, final int dy) {
         int i = index(x1, y1);
         float z = z1;
         int dx = x2 - x1;
@@ -543,60 +607,9 @@ public final class Rasterizer3D {
             }
             if (++x > x2)
                 break;
-            y += y_inc;
+            y += dy;
             z += dz;
-            i += w_plus_one;
-        }
-    }
-    
-    private void x_line(int x1, int y1, float z1, int x2, float z2, int dx, int dy, final int y_inc) {
-        int n = w * y_inc;
-        int i = index(x1, y1);
-        int _dx = 0, _dy = 0;
-        float z = z1;
-        final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
-        for (int x = x1, y = y1, err = 0;;) {
-            if (z_buff[i] > z) {
-                g.plot(x, y);
-                z_buff[i] = z;
-            }
-            if (++x > x2)
-                break;
-            i++;
-            _dx++;
-            err += dy;
-            if (err << 1 >= dx) {
-                y += y_inc;
-                _dy++;
-                i += n;
-                err -= dx;
-            } 
-            z = z1 + dz * sqrt_table[index(_dx, _dy)];
-        }
-    }
-    
-    private void y_line(int x1, int y1, float z1, int y2, float z2, int dx, int dy, final int x_inc) {
-        int i = index(x1, y1);
-        int _dy = 0, _dx = 0;
-        float z = z1;
-        final float dz = (z2 - z1) / sqrt_table[index(dx, dy)];
-        for (int y = y1, x = x1, err = 0;;) {
-            if (z_buff[i] > z) {
-                g.plot(x, y);
-                z_buff[i] = z;
-            }
-            if (++y > y2)
-                break;
-            _dy++;
-            i += w;
-            err += dx;
-            if (err << 1 >= dy) {
-                x += x_inc;
-                _dx++;
-                i += x_inc;
-                err -= dy;
-            }
-            z = z1 + dz * sqrt_table[index(_dx, _dy)];
+            i += 1 + dy * w;
         }
     }
     
