@@ -25,12 +25,10 @@ public class Sandbox {
     public static void main(String[] args) throws IOException {
         DefaultGraphics g = new DefaultGraphics(1024, 768);
         Renderer r = new Renderer(g);
-//        Rasterizer3D ra = r.getRasterizer();
-//        ra.drawTriangleWireframe(110, 85, ca, 106, 397, ca, 320, 420, ca, Graphics.WHITE);
         Camera c = new Camera(1f, 100f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, 10, -30f);
+        c.setPosition(0f, -15, 50);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(0);
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(45));
         c.updateViewMatrix();
         M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
         MI instance = new MI();

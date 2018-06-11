@@ -34,7 +34,7 @@ public class Renderer {
     public void addDirectionLight(DirectionLight light) {dirLights.add(light);}
     public void addPointLight(PointLight light) {pointLights.add(light);}
     
-//  simple wireframe rendering
+//  so far only simple wireframe rendering 
     public void render(Camera c, ModelInstance instance) {
         Model m = instance.getModel();
         if (m.numFaces() > faces.length)
@@ -70,12 +70,5 @@ public class Renderer {
         m.reset();
         curr_face_idx = 0;
     }
-    
-    private void lightVertex(Vertex v, Material m) {
-        float r = 0f, g = 0f, b = 0f;
-        v.setTempColor(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b);
-        v.markAsLighted();
-    }
-    
     
 }
