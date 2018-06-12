@@ -36,7 +36,7 @@ public class Sandbox {
         c.setPosition(0f, 30, -50);
         c.lookAt(0, 0, 0);
         c.moveInDirection(30);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(115));
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
         c.updateViewMatrix();
         M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
         MI instance = new MI();
@@ -183,6 +183,8 @@ public class Sandbox {
         V v0, v1, v2;
         Vec n;
         
+        float r, g, b;
+        
         @Override
         public Vector3f norm() {
             return n;
@@ -206,6 +208,28 @@ public class Sandbox {
         @Override
         public boolean isTwoFaced() {
             return false;
+        }
+
+        @Override
+        public void setTempRGB(float r, float g, float b) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
+        }
+        
+        @Override
+        public float getTempRed() {
+            return r;
+        }
+        
+        @Override
+        public float getTempGreen() {
+            return g;
+        }
+        
+        @Override
+        public float getTempBlue() {
+            return b;
         }
         
     }

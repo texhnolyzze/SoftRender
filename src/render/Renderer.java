@@ -23,9 +23,8 @@ public class Renderer {
     private final List<PointLight> pointLights = new ArrayList<>();
     
     private int curr_face_idx;
-    private Face[] faces = new Face[1024];
+    private Face[] temp_faces = new Face[1024];
     
-    private int temp_rgb;
     private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3(), temp_vec3 = new vec3();
     
     private Camera curr_camera;
@@ -50,8 +49,8 @@ public class Renderer {
         curr_camera = c;
         Model m = instance.getModel();
         final Material mat = instance.getMaterial();
-        if (m.numFaces() > faces.length)
-            faces = new Face[2 * m.numFaces()];
+        if (m.numFaces() > temp_faces.length)
+            temp_faces = new Face[2 * m.numFaces()];
         float dir_x = c.getDirectionX();
         float dir_y = c.getDirectionY();
         float dir_z = c.getDirectionZ();
@@ -64,18 +63,13 @@ public class Renderer {
                 if (MathUtils.dot(dir_x, dir_y, dir_z, nx, ny, nz) >= 0.0f) 
                     continue;   
             }
-            faces[curr_face_idx++] = f;
+            temp_faces[curr_face_idx++] = f;
         }
-        if (shadeMode == ShadeMode.FLAT) {
-            for (int i = 0; i < curr_face_idx; i++) 
-                lightFace(faces[i], mat);
-        } else if (shadeMode == ShadeMode.GOURAUD) {
-            for (int i = 0; i < curr_face_idx; i++) {
-                Face f = faces[i];
-                if (!f.v0().lighted()) lightVertex(f.v0(), mat);
-                if (!f.v1().lighted()) lightVertex(f.v1(), mat);
-                if (!f.v2().lighted()) lightVertex(f.v2(), mat);
-            }
+        switch (shadeMode) {
+            case FLAT:
+                for (int i = 0; i < curr_face_idx; i++) 
+                    lightFace(temp_faces[i], mat);
+                break;
         }
         c.toViewSpace(m.vertices());
         c.project(m.vertices(), rasterizer.getGraphics().getWidth(), rasterizer.getGraphics().getHeight());
@@ -83,7 +77,7 @@ public class Renderer {
             case WIREFRAME:
                 int rgb = rgb(mat.ar, mat.ag, mat.ab); // use material ambient color
                 for (int i = 0; i < curr_face_idx; i++) {
-                    Face f = faces[i];
+                    Face f = temp_faces[i];
                     Vector3f v0 = f.v0().pos();
                     Vector3f v1 = f.v1().pos();
                     Vector3f v2 = f.v2().pos();
@@ -97,13 +91,12 @@ public class Renderer {
                 break;
             case FLAT:
                 for (int i = 0; i < curr_face_idx; i++) {
-                    Face f = faces[i];
-                    lightFace(f, mat);
+                    Face f = temp_faces[i];
                     rasterizer.drawTriangleFlatShading(
                         round(f.v0().pos().x()), round(f.v0().pos().y()), f.v0().pos().z(), 
                         round(f.v1().pos().x()), round(f.v1().pos().y()), f.v1().pos().z(), 
                         round(f.v2().pos().x()), round(f.v2().pos().y()), f.v2().pos().z(), 
-                        temp_rgb
+                        rgb(f.getTempRed(), f.getTempGreen(), f.getTempBlue())
                     );
                 }
                 break;
@@ -151,11 +144,7 @@ public class Renderer {
                 b += pow * m.sb * l.sb;
             }
         }
-        temp_rgb = rgb(
-            r > 1f ? 1f : r, 
-            g > 1f ? 1f : g, 
-            b > 1f ? 1f : b
-        );
+        f.setTempRGB(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b);
     }
     
     private void lightVertex(Vertex v, final Material m) {
