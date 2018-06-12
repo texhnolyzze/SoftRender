@@ -88,16 +88,16 @@ public final class Rasterizer3D {
     // most of logic stolen from: http://grafika.me/node/67
     public void drawTriangleFlatShading(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
         g.setColor(rgb);
-        if (y3 < y2) {
-            temp_x = x3;
-            temp_y = y3;
-            temp_float = z3;
-            x3 = x2;
-            y3 = y2;
-            z3 = z2;
-            x2 = temp_x;
-            y2 = temp_y;
-            z2 = temp_float;
+        if (y2 < y1) {
+            temp_x = x2;
+            temp_y = y2;
+            temp_float = z2;
+            x2 = x1;
+            y2 = y1;
+            z2 = z1;
+            x1 = temp_x;
+            y1 = temp_y;
+            z1 = temp_float;
         }
         if (y3 < y1) {
             temp_x = x3;
@@ -110,16 +110,16 @@ public final class Rasterizer3D {
             y1 = temp_y;
             z1 = temp_float;
         }
-        if (y2 < y1) {
-            temp_x = x2;
-            temp_y = y2;
-            temp_float = z2;
-            x2 = x1;
-            y2 = y1;
-            z2 = z1;
-            x1 = temp_x;
-            y1 = temp_y;
-            z1 = temp_float;
+        if (y3 < y2) {
+            temp_x = x3;
+            temp_y = y3;
+            temp_float = z3;
+            x3 = x2;
+            y3 = y2;
+            z3 = z2;
+            x2 = temp_x;
+            y2 = temp_y;
+            z2 = temp_float;
         }
         float dx13 = 0f, dx12 = 0f, dx23 = 0f;
         float dz13 = 0f, dz12 = 0f, dz23 = 0f;
@@ -166,18 +166,32 @@ public final class Rasterizer3D {
             rz += dz12;
         }
         if (y1 == y2) {
-            wx1 = x1;
-            wx2 = x2;
-            lz = z1;
-            rz = z2;
-        }
-        if (_dx13 < dx23) {
-            temp_float = _dx13;
-            _dx13 = dx23;
-            dx23 = temp_float;
-            temp_float = _dz13;
-            _dz13 = dz23;
-            dz23 = temp_float;
+            if (x2 < x1) {
+                wx1 = x2;
+                wx2 = x1;
+                lz = z2;
+                rz = z1;
+                temp_float = _dx13;
+                _dx13 = dx23;
+                dx23 = temp_float;
+                temp_float = _dz13;
+                _dz13 = dz23;
+                dz23 = temp_float;
+            } else {
+                wx1 = x1;
+                wx2 = x2;
+                lz = z1;
+                rz = z2;
+            }
+        } else {
+            if (_dx13 < dx23) {
+                temp_float = _dx13;
+                _dx13 = dx23;
+                dx23 = temp_float;
+                temp_float = _dz13;
+                _dz13 = dz23;
+                dz23 = temp_float;
+            }
         }
         for (int y = y2; y <= y3; y++) {
             int lx = round(wx1);
@@ -339,28 +353,57 @@ public final class Rasterizer3D {
             rb += db12;
         }
         if (y1 == y2) {
-            wx2 = x2;
-            rz = z2;
-            rr = red(rgb2);
-            rg = green(rgb2);
-            rb = blue(rgb2);
-        }
-        if (_dx13 < dx23) {
-            temp_float = _dx13;
-            _dx13 = dx23;
-            dx23 = temp_float;
-            temp_float = _dz13;
-            _dz13 = dz23;
-            dz23 = temp_float;
-            temp_float = _dr13;
-            _dr13 = dr23;
-            dr23 = temp_float;
-            temp_float = _dg13;
-            _dg13 = dg23;
-            dg23 = temp_float;
-            temp_float = _db13;
-            _db13 = db23;
-            db23 = temp_float;
+            if (x2 < x1) {
+                wx1 = x2;
+                wx2 = x1;
+                lz = z2;
+                rz = z1;
+                rr = lr;
+                lr = red(rgb2);
+                rg = lg;
+                lg = green(rgb2);
+                rb = lb;
+                lb = blue(rgb2);
+                temp_float = _dx13;
+                _dx13 = dx23;
+                dx23 = temp_float;
+                temp_float = _dz13;
+                _dz13 = dz23;
+                dz23 = temp_float;
+                temp_float = _dr13;
+                _dr13 = dr23;
+                dr23 = temp_float;
+                temp_float = _dg13;
+                _dg13 = dg23;
+                dg23 = temp_float;
+                temp_float = _db13;
+                _db13 = db23;
+                db23 = temp_float;
+            } else {
+                wx2 = x2;
+                rz = z2;
+                rr = red(rgb2);
+                rg = green(rgb2);
+                rb = blue(rgb2);
+            }
+        } else {
+            if (_dx13 < dx23) {
+                temp_float = _dx13;
+                _dx13 = dx23;
+                dx23 = temp_float;
+                temp_float = _dz13;
+                _dz13 = dz23;
+                dz23 = temp_float;
+                temp_float = _dr13;
+                _dr13 = dr23;
+                dr23 = temp_float;
+                temp_float = _dg13;
+                _dg13 = dg23;
+                dg23 = temp_float;
+                temp_float = _db13;
+                _db13 = db23;
+                db23 = temp_float;
+            }
         }
         for (int y = y2; y <= y3; y++) {
             int lx = round(wx1);
@@ -582,12 +625,12 @@ public final class Rasterizer3D {
     private void hor_line(int x1, float z1, int x2, float z2, int y) {
         int i = index(x1, y);
         float z = z1;
-        final float dz = (z2 - z1) / (x2 - x1);
+        final float dz = (z2 - z1) / max(1, (x2 - x1));
         for (int x = x1;;) {
             if (z_buff[i] > z) {
                 g.plot(x, y);
                 z_buff[i] = z;
-            }
+            } 
             if (++x > x2)
                 break;
             z += dz;

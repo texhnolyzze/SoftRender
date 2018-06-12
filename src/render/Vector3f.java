@@ -17,6 +17,8 @@ public interface Vector3f {
     
     static class vec3 implements Vector3f { // just for internal usage
         
+        private static vec3 temp_vec = new vec3();
+        
         float x, y, z;
         
         vec3() {}
@@ -72,6 +74,10 @@ public interface Vector3f {
             return x * v.x + y * v.y + z * v.z;
         }
         
+        float dot(float x, float y, float z) {
+            return this.x * x + this.y * y + this.z * z;
+        }
+        
         vec3 normalize(float len2) {
             float len_inv = (float) (1.0 / Math.sqrt(len2));
             x *= len_inv;
@@ -82,6 +88,20 @@ public interface Vector3f {
         
         vec3 normalize() {
             return normalize(len2());
+        }
+        
+        // axis is always unit vector
+        vec3 reflect(vec3 axis, vec3 dest) {
+            return reflect(axis.x, axis.y, axis.z, dest);
+        }
+        
+        vec3 reflect(float axis_x, float axis_y, float axis_z, vec3 dest) {
+            float dp = this.dot(axis_x, axis_y, axis_z);
+            return dest.set(
+                x + 2f * (axis_x * dp - x), 
+                y + 2f * (axis_y * dp - y), 
+                z + 2f * (axis_z * dp - z)
+            );
         }
         
         vec3 mul3x3(mat4 mat) {

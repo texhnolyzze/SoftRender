@@ -9,6 +9,7 @@ public interface Vertex {
     Vector3f pos();
     Vector3f norm();
     
+    boolean lighted();
     void markAsLighted();
     void markAsNotLighted();
     

@@ -6,13 +6,18 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import render.BaseLight.AmbientLight;
+import render.BaseLight.DirectionLight;
 import render.Camera;
 import render.Face;
+import render.Graphics;
 import render.Graphics.DefaultGraphics;
 import render.Material;
 import render.Model;
 import render.ModelInstance;
+import render.Rasterizer3D;
 import render.Renderer;
+import render.Renderer.ShadeMode;
 import render.Vector3f;
 import render.Vertex;
 
@@ -25,19 +30,27 @@ public class Sandbox {
     public static void main(String[] args) throws IOException {
         DefaultGraphics g = new DefaultGraphics(1024, 768);
         Renderer r = new Renderer(g);
+        Rasterizer3D rast = r.getRasterizer();
+//        rast.drawTriangleFlatShading(570, 348, ca, 512, 378, ca, 453, 348, ca, Graphics.WHITE);
         Camera c = new Camera(1f, 100f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, -15, 50);
+        c.setPosition(0f, 30, -50);
         c.lookAt(0, 0, 0);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(45));
+        c.moveInDirection(30);
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(115));
         c.updateViewMatrix();
         M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
         MI instance = new MI();
         instance.m = m;
-        r.render(c, instance);
+        instance.mat = new Material(0.24725f, 0.1995f, 0.0745f, 0.75164f, 0.60648f, 0.22648f, 0.628281f, 0.555802f, 0.366065f, 0.4f);
+        r.addAmbientLight(new AmbientLight(1f, 1f, 1f));
+        r.addDirectionLight(new DirectionLight(0.1f, 0.3f, 0.2f, 0.5f, 0.5f, 0.5f, 0.3f, 0.2f, 0.1f, 64f, 43f, 5f));
+        long t = System.nanoTime();
+        r.render(c, instance, ShadeMode.FLAT);
+        System.out.println(System.nanoTime() - t);
         ImageIO.write(g.getAsImage(), "jpg", new File("./src/sandbox/out/1.jpg"));
     }
     
-    static float angle = (float) Math.toRadians(25);
+    static float angle = (float) Math.toRadians(0);
     static float ca = (float) Math.cos(angle);
     static float sa = (float) Math.sin(angle);
     static float temp_x, temp_z;
@@ -127,6 +140,11 @@ public class Sandbox {
         public float getTempColorBlue() {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         }
+
+        @Override
+        public boolean lighted() {
+            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
         
     }
     
@@ -195,6 +213,7 @@ public class Sandbox {
     static class MI implements ModelInstance {
 
         M m;
+        Material mat;
         
         @Override
         public Model getModel() {
@@ -203,7 +222,7 @@ public class Sandbox {
 
         @Override
         public Material getMaterial() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return mat;
         }
         
     }

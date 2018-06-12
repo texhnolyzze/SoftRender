@@ -14,8 +14,8 @@ public class Camera {
     private float aspect;
     private float near, far;
     
-    private vec3 pos = new vec3();
-    private vec3 dir = new vec3(0, 0, 1);
+    vec3 pos = new vec3();
+    vec3 dir = new vec3(0, 0, 1);
     private vec3 up = new vec3(0, 1, 0);
     
     private vec3 temp_vec = new vec3();
@@ -68,7 +68,7 @@ public class Camera {
         return this;
     }
     
-    public void setUpVector() {
+    private void setUpVector() {
         dir.cross(up, temp_vec);
         temp_vec.normalize();
         temp_vec.cross(dir, up);
@@ -120,11 +120,20 @@ public class Camera {
         return this;
     }
     
-    public Camera apply(Matrix4x4f transform) {
+    public Camera transformDirection(Matrix4x4f transform) {
         dir.mul3x3(transform);
         up.mul3x3(transform);
+        return this;
+    }
+    
+    public Camera transformPosition(Matrix4x4f transform) {
         pos.mul4x3(transform);
         return this;
+    }
+    
+    public Camera apply(Matrix4x4f transform) {
+        transformDirection(transform);
+        return transformPosition(transform);
     }
     
     public Camera setPosition(Vector3f pos) {
@@ -171,8 +180,8 @@ public class Camera {
     }
     
     final void project(Iterable<Vertex> vertices, int w, int h) {
-        float half_w_minus_one = (float) w / 2f - 0.5f;
-        float half_h_minus_one = (float) h / 2f - 0.5f;
+        float half_w_minus_one = (float) 0.5f * (w - 1f);
+        float half_h_minus_one = (float) 0.5f * (h - 1f);
         for (Vertex v : vertices) {
             projectionMatrix.project(v.pos());
             v.pos().set(

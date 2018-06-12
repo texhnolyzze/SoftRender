@@ -8,10 +8,10 @@ import static render.MathUtils.clamp;
  */
 public class Material {
     
-    private float ar, ag, ab;
-    private float dr, dg, db;
-    private float sr, sg, sb;
-    private float shininess;
+    float ar, ag, ab;
+    float dr, dg, db;
+    float sr, sg, sb;
+    float shininess;
     
     public Material(float ar, float ag, float ab, 
                     float dr, float dg, float db, 

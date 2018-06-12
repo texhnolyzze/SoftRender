@@ -79,8 +79,8 @@ public interface Matrix4x4f {
             float fn = 1f / (far - near);
             values[M00] = f;
             values[M11] = aspect * f;
-            values[M22] = -(far + near) * fn;
-            values[M23] = -(2f * far * near) * fn;
+            values[M22] = (far + near) * fn;
+            values[M23] = (2f * far * near) * fn;
         }
 
         void toViewSpace(Vector3f v) {
@@ -100,8 +100,8 @@ public interface Matrix4x4f {
         }
 
         void project(Vector3f v) {
-            float w = 1f / (v.z() * values[M23]);
-            v.set(v.x() * values[M00] * w, v.y() * values[M11] * w, (values[M22] * v.z() - 1f) * w);
+            float w_inv = 1f / (v.z() * values[M23]);
+            v.set(v.x() * values[M00] * w_inv, v.y() * values[M11] * w_inv, (values[M22] * v.z() - 1f) * w_inv);
         }
         
         void setTranslation(float dx, float dy, float dz) {

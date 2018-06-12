@@ -29,6 +29,10 @@ public interface Graphics {
         return ((r << 16) | (g << 8)) | b;
     }
     
+    public static int rgb(float r, float g, float b) {
+        return rgb((int) (r * 255f), (int) (g * 255f), (int) (b * 255f));
+    }
+    
     public static int red(int rgb) {
         return (rgb & 0xff0000) >> 16;
     }
