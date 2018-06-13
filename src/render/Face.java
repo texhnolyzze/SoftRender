@@ -14,11 +14,8 @@ public interface Face {
     
     boolean isTwoFaced();
     
-    void setTempRGB(float r, float g, float b);
-    
-    float getTempRed();
-    float getTempGreen();
-    float getTempBlue();
+    int getTempRGB();
+    void setTempRGB(int rgb);
     
     default Vector3f getAVGPoint(Vector3f dest) {
         return dest.set(

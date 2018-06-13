@@ -8,6 +8,9 @@ import static render.MathUtils.clamp;
  */
 public class Material {
     
+//  GOLD
+    public static final Material DEFAULT = new Material(0.24725f, 0.1995f, 0.0745f, 0.75164f, 0.60648f, 0.22648f, 0.628281f, 0.555802f, 0.366065f, 0.4f);
+    
     float ar, ag, ab;
     float dr, dg, db;
     float sr, sg, sb;

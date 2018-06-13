@@ -16,9 +16,7 @@ public interface Vector3f {
     Vector3f set(float x, float y, float z);
     
     static class vec3 implements Vector3f { // just for internal usage
-        
-        private static vec3 temp_vec = new vec3();
-        
+                
         float x, y, z;
         
         vec3() {}
@@ -54,12 +52,19 @@ public interface Vector3f {
             return this;
         }
         
-        vec3 sub(vec3 v, vec3 dest) {
-            return dest.set(x - v.x, y - v.y, z - v.z);
+        vec3 add(vec3 v) {
+            x += v.x;
+            y += v.y;
+            z += v.z;
+            return this;
         }
         
-        vec3 subLocal(vec3 v) {
-                return set(x - v.x, y - v.y, z - v.z);
+        vec3 add(vec3 v, vec3 dest) {
+            return dest.set(x + v.x, x + v.y, y + v.z);
+        }
+        
+        vec3 sub(vec3 v, vec3 dest) {
+            return dest.set(x - v.x, y - v.y, z - v.z);
         }
         
         vec3 cross(vec3 v, vec3 dest) {

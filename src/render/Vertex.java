@@ -13,10 +13,7 @@ public interface Vertex {
     void markAsLighted();
     void markAsNotLighted();
     
-    void setTempColor(float r, float g, float b);
-    
-    float getTempColorRed();
-    float getTempColorGreen();
-    float getTempColorBlue();
+    void setTempRGB(int rgb);
+    int getTempRGB();
     
 }

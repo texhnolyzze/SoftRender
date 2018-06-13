@@ -8,6 +8,9 @@ import java.awt.image.BufferedImage;
  */
 public interface Graphics {
     
+    public static final int BLACK = rgb(0, 0, 0);
+    public static final int WHITE = rgb(255, 255, 255);
+    
     // Color format is:
     // most bit -> (--------RRRRRRRRGGGGGGGGBBBBBBBB) <- least bit
     
@@ -21,9 +24,6 @@ public interface Graphics {
     
     void plot(int x, int y);
     void plot(int x, int y, int rgb);
-    
-    public static final int BLACK = rgb(0, 0, 0);
-    public static final int WHITE = rgb(255, 255, 255);
     
     public static int rgb(int r, int g, int b) {
         return ((r << 16) | (g << 8)) | b;

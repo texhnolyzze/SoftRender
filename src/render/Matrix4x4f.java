@@ -58,7 +58,7 @@ public interface Matrix4x4f {
         }
         
         void setToViewMatrix(vec3 pos, vec3 dir, vec3 up) { 
-            up.cross(dir, temp); // "right" vector
+            up.cross(dir, temp); // "left" vector
             values[M00] = temp.x;
             values[M01] = up.x;
             values[M02] = dir.x;
@@ -73,14 +73,14 @@ public interface Matrix4x4f {
             values[M32] = -dot(pos.x, pos.y, pos.z, dir.x, dir.y, dir.z);
         }
     
-        void setToProjectionMatrix(float fov_y, float aspect, 
+        void setToProjectionMatrix(float fov_y_rad, float aspect, 
                                           float near, float far) {
-            float f = (float) (1f / (aspect * Math.tan(Math.toRadians(fov_y) * 0.5f)));
+            float f = (float) (1f / (aspect * Math.tan(fov_y_rad * 0.5f)));
             float fn = 1f / (far - near);
             values[M00] = f;
             values[M11] = aspect * f;
-            values[M22] = (far + near) * fn;
-            values[M23] = (2f * far * near) * fn;
+            values[M22] = -(far + near) * fn;
+            values[M23] = (2f * near * far) * fn;
         }
 
         void toViewSpace(Vector3f v) {
@@ -100,8 +100,12 @@ public interface Matrix4x4f {
         }
 
         void project(Vector3f v) {
-            float w_inv = 1f / (v.z() * values[M23]);
-            v.set(v.x() * values[M00] * w_inv, v.y() * values[M11] * w_inv, (values[M22] * v.z() - 1f) * w_inv);
+            float w_inv = -1f / (v.z());
+            v.set(
+                -v.x() * values[M00] * w_inv, // I do not know why, but if you 
+                -v.y() * values[M11] * w_inv, // do not put minus signs before v.x() and v.x(), the X and Y axes are inverted.
+                (v.z() * values[M22] + values[M23]) * w_inv
+            );
         }
         
         void setTranslation(float dx, float dy, float dz) {
@@ -110,6 +114,7 @@ public interface Matrix4x4f {
             values[M32] = dz;
         }
         
+        // axis is unit vector
         void setToRotation(vec3 axis, float angle) {
             setToRotation(axis.x, axis.y, axis.z, angle);
         }

@@ -74,4 +74,16 @@ public final class MathUtils {
         return (a ^ (a >> 31)) + ((a >> 31) & 1);
     }
     
+    public static boolean cubesIntersects(float x000_1, float y000_1, float z000_1, float x111_1, float y111_1, float z111_1, float x000_2, float y000_2, float z000_2, float x111_2, float y111_2, float z111_2) {
+        if (!intervalsOverlap(x000_1, x111_1, x000_2, x111_2)) 
+            return false;
+        if (!intervalsOverlap(y000_1, y111_1, y000_2, y111_2)) 
+            return false;
+        return intervalsOverlap(z000_1, z111_1, z000_2, z111_2);
+    }
+    
+    public static boolean intervalsOverlap(float start1, float end1, float start2, float end2) {
+        return Math.max(start1, start2) < Math.min(end1, end2);
+    }
+    
 }

@@ -6,7 +6,6 @@ import static render.Graphics.rgb;
 import render.BaseLight.AmbientLight;
 import render.BaseLight.DirectionLight;
 import render.BaseLight.PointLight;
-import static render.MathUtils.clamp;
 import static render.MathUtils.round;
 import render.Vector3f.vec3;
 
@@ -16,6 +15,10 @@ import render.Vector3f.vec3;
  */
 public class Renderer {
 
+    public enum ShadeMode {
+        WIREFRAME, FLAT, GOURAUD
+    }
+    
     private final Rasterizer3D rasterizer;
     
     private final List<AmbientLight> ambLights = new ArrayList<>();
@@ -41,14 +44,16 @@ public class Renderer {
     public void addDirectionLight(DirectionLight light) {dirLights.add(light);}
     public void addPointLight(PointLight light) {pointLights.add(light);}
     
-    public enum ShadeMode {
-        WIREFRAME, FLAT, GOURAUD
-    }
-    
     public void render(Camera c, ModelInstance instance, final ShadeMode shadeMode) {
         curr_camera = c;
+        AABB aabb = instance.getAABB();
+        if (aabb != null) {
+            if (!c.testAABB(aabb))
+                return;
+        }
+        instance.translateModelIntoWorldSpace();
         Model m = instance.getModel();
-        final Material mat = instance.getMaterial();
+        final Material mat = instance.getMaterial() == null ? Material.DEFAULT : instance.getMaterial();
         if (m.numFaces() > temp_faces.length)
             temp_faces = new Face[2 * m.numFaces()];
         float dir_x = c.getDirectionX();
@@ -81,7 +86,7 @@ public class Renderer {
                     Vector3f v0 = f.v0().pos();
                     Vector3f v1 = f.v1().pos();
                     Vector3f v2 = f.v2().pos();
-                    rasterizer.drawTriangleWireframe(
+                    rasterizer.strokeTriangle(
                         round(v0.x()), round(v0.y()), v0.z(), 
                         round(v1.x()), round(v1.y()), v1.z(), 
                         round(v2.x()), round(v2.y()), v2.z(), 
@@ -92,11 +97,11 @@ public class Renderer {
             case FLAT:
                 for (int i = 0; i < curr_face_idx; i++) {
                     Face f = temp_faces[i];
-                    rasterizer.drawTriangleFlatShading(
+                    rasterizer.fillTriangle(
                         round(f.v0().pos().x()), round(f.v0().pos().y()), f.v0().pos().z(), 
                         round(f.v1().pos().x()), round(f.v1().pos().y()), f.v1().pos().z(), 
                         round(f.v2().pos().x()), round(f.v2().pos().y()), f.v2().pos().z(), 
-                        rgb(f.getTempRed(), f.getTempGreen(), f.getTempBlue())
+                        f.getTempRGB()
                     );
                 }
                 break;
@@ -114,6 +119,7 @@ public class Renderer {
         float ny = f.norm().y();
         float nz = f.norm().z();
         f.getAVGPoint(temp_vec1);
+        temp_vec1.sub(curr_camera.pos, temp_vec2);
         float r = 0f, g = 0f, b = 0f;
         for (AmbientLight l : ambLights) {
             if (!l.enabled) 
@@ -134,9 +140,8 @@ public class Renderer {
                 g += -dp * m.dg * l.dg;
                 b += -dp * m.db * l.db;
             }
-            l.dir.reflect(nx, ny, nz, temp_vec2);
-            temp_vec1.sub(curr_camera.pos, temp_vec3);
-            dp = temp_vec2.dot(temp_vec3);
+            l.dir.reflect(nx, ny, nz, temp_vec3);
+            dp = temp_vec3.dot(temp_vec2);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, m.shininess);
                 r += pow * m.sr * l.sr;
@@ -144,7 +149,7 @@ public class Renderer {
                 b += pow * m.sb * l.sb;
             }
         }
-        f.setTempRGB(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b);
+        f.setTempRGB(rgb(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b));
     }
     
     private void lightVertex(Vertex v, final Material m) {

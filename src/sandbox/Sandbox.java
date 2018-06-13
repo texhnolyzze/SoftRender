@@ -6,11 +6,11 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
+import render.AABB;
 import render.BaseLight.AmbientLight;
 import render.BaseLight.DirectionLight;
 import render.Camera;
 import render.Face;
-import render.Graphics;
 import render.Graphics.DefaultGraphics;
 import render.Material;
 import render.Model;
@@ -31,19 +31,17 @@ public class Sandbox {
         DefaultGraphics g = new DefaultGraphics(1024, 768);
         Renderer r = new Renderer(g);
         Rasterizer3D rast = r.getRasterizer();
-//        rast.drawTriangleFlatShading(570, 348, ca, 512, 378, ca, 453, 348, ca, Graphics.WHITE);
-        Camera c = new Camera(1f, 100f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, 30, -50);
+        Camera c = new Camera(10f, 1000f, 45, g.getWidth(), g.getHeight());
+        c.setPosition(0f, 0, -50);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(30);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
+        c.moveInDirection(-10);
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(-30));
         c.updateViewMatrix();
-        M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
+        M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
         MI instance = new MI();
         instance.m = m;
-        instance.mat = new Material(0.24725f, 0.1995f, 0.0745f, 0.75164f, 0.60648f, 0.22648f, 0.628281f, 0.555802f, 0.366065f, 0.4f);
-        r.addAmbientLight(new AmbientLight(1f, 1f, 1f));
-        r.addDirectionLight(new DirectionLight(0.1f, 0.3f, 0.2f, 0.5f, 0.5f, 0.5f, 0.3f, 0.2f, 0.1f, 64f, 43f, 5f));
+        r.addAmbientLight(new AmbientLight(0.5f, 0.5f, 0.5f));
+        r.addDirectionLight(new DirectionLight(0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 1f, 1f, 1f));
         long t = System.nanoTime();
         r.render(c, instance, ShadeMode.FLAT);
         System.out.println(System.nanoTime() - t);
@@ -100,6 +98,7 @@ public class Sandbox {
     static class V implements Vertex {
 
         Vec pos;
+        int rgb;
         
         @Override
         public Vector3f pos() {
@@ -122,28 +121,18 @@ public class Sandbox {
         }
 
         @Override
-        public void setTempColor(float r, float g, float b) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public float getTempColorRed() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public float getTempColorGreen() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public float getTempColorBlue() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
         public boolean lighted() {
             throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+        }
+
+        @Override
+        public void setTempRGB(int rgb) {
+            this.rgb = rgb;
+        }
+
+        @Override
+        public int getTempRGB() {
+            return rgb;
         }
         
     }
@@ -183,7 +172,7 @@ public class Sandbox {
         V v0, v1, v2;
         Vec n;
         
-        float r, g, b;
+        int rgb;
         
         @Override
         public Vector3f norm() {
@@ -211,26 +200,15 @@ public class Sandbox {
         }
 
         @Override
-        public void setTempRGB(float r, float g, float b) {
-            this.r = r;
-            this.g = g;
-            this.b = b;
+        public void setTempRGB(int rgb) {
+            this.rgb = rgb;
         }
         
         @Override
-        public float getTempRed() {
-            return r;
+        public int getTempRGB() {
+            return rgb;
         }
-        
-        @Override
-        public float getTempGreen() {
-            return g;
-        }
-        
-        @Override
-        public float getTempBlue() {
-            return b;
-        }
+            
         
     }
     
@@ -247,6 +225,15 @@ public class Sandbox {
         @Override
         public Material getMaterial() {
             return mat;
+        }
+
+        @Override
+        public void translateModelIntoWorldSpace() {
+        }
+
+        @Override
+        public AABB getAABB() {
+            return null;
         }
         
     }
@@ -273,6 +260,11 @@ public class Sandbox {
         @Override
         public void reset() {
             
+        }
+
+        @Override
+        public int numVertices() {
+            return vertices.size();
         }
         
     }

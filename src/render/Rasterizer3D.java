@@ -78,7 +78,7 @@ public final class Rasterizer3D {
         }
     }
     
-    public void drawTriangleWireframe(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
+    public void strokeTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
         g.setColor(rgb);
         line(x1, y1, z1, x2, y2, z2);
         line(x2, y2, z2, x3, y3, z3);
@@ -86,7 +86,7 @@ public final class Rasterizer3D {
     }
     
     // most of logic stolen from: http://grafika.me/node/67
-    public void drawTriangleFlatShading(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
+    public void fillTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
         g.setColor(rgb);
         if (y2 < y1) {
             temp_x = x2;
@@ -214,7 +214,7 @@ public final class Rasterizer3D {
     }
     
     
-    public void drawTriangleGouraudShading(int x1, int y1, float z1, int rgb1, int x2, int y2, float z2, int rgb2, int x3, int y3, float z3, int rgb3) {
+    public void fillTriangleInterpolateColors(int x1, int y1, float z1, int rgb1, int x2, int y2, float z2, int rgb2, int x3, int y3, float z3, int rgb3) {
         if (y3 < y2) {
             temp_x = x3;
             temp_y = y3;
@@ -625,7 +625,7 @@ public final class Rasterizer3D {
     private void hor_line(int x1, float z1, int x2, float z2, int y) {
         int i = index(x1, y);
         float z = z1;
-        final float dz = (z2 - z1) / max(1, (x2 - x1));
+        final float dz = (z2 - z1) / (x2 - x1);
         for (int x = x1;;) {
             if (z_buff[i] > z) {
                 g.plot(x, y);
