@@ -74,6 +74,10 @@ public interface Vector3f {
             return dest.set(x - v.x, y - v.y, z - v.z);
         }
         
+        vec3 scale(float s) {
+            return set(x * s, y * s, z * s);
+        }
+                
         vec3 cross(vec3 v, vec3 dest) {
             return dest.set(
                 y * v.z - z * v.y,
@@ -92,6 +96,14 @@ public interface Vector3f {
         
         vec3 normalize(float len2) {
             float len_inv = (float) (1.0 / Math.sqrt(len2));
+            x *= len_inv;
+            y *= len_inv;
+            z *= len_inv;
+            return this;
+        }
+        
+        vec3 _normalize(float len) {
+            float len_inv = 1f / len;
             x *= len_inv;
             y *= len_inv;
             z *= len_inv;

@@ -7,11 +7,12 @@ import java.util.List;
 import java.util.Scanner;
 import javax.imageio.ImageIO;
 import render.AABB;
-import render.BaseLight.AmbientLight;
-import render.BaseLight.DirectionLight;
+import render.Light.AmbientLight;
+import render.Light.DirectionLight;
 import render.Camera;
 import render.Face;
 import render.Graphics.DefaultGraphics;
+import render.Light.PointLight;
 import render.Material;
 import render.Model;
 import render.ModelInstance;
@@ -32,12 +33,12 @@ public class Sandbox {
         Renderer r = new Renderer(g);
         Rasterizer3D rast = r.getRasterizer();
         Camera c = new Camera(10f, 1000f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(30f, 30, 30);
+        c.setPosition(0f, 60, 75);
         c.lookAt(0, 0, 0);
         c.moveInDirection(0);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(-100));
         c.updateViewMatrix();
-        M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
+        M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
         MI instance = new MI();
         instance.m = m;
         r.addAmbientLight(new AmbientLight(0.3f, 0.3f, 0.3f));
@@ -47,6 +48,13 @@ public class Sandbox {
             0.6f, 0.6f, 0.6f, 
             -1f, -1f, -1f)
         );
+        r.addPointLight(new PointLight(
+            0.5f, 0.5f, 0.5f,
+            0.3f, 0.4f, 0.4f,
+            0.4f, 0.5f, 0.1f,
+            0f, 0f, 1f,
+            1f, 0.5f, 0.1f
+        ));
         long t = System.nanoTime();
         r.render(c, instance, ShadeMode.FLAT);
         System.out.println(System.nanoTime() - t);
@@ -67,9 +75,9 @@ public class Sandbox {
             if (split[0].equals("v")) {
                 V v = new V();
                 v.pos = new Vec();
-                v.pos.x = Float.parseFloat(split[1]) * 10;
-                v.pos.y = Float.parseFloat(split[2]) * 10;
-                v.pos.z = Float.parseFloat(split[3]) * 10;
+                v.pos.x = Float.parseFloat(split[1]);
+                v.pos.y = Float.parseFloat(split[2]);
+                v.pos.z = Float.parseFloat(split[3]);
                 temp_x = v.pos.x * ca - v.pos.z * sa;
                 temp_z = v.pos.x * sa + v.pos.z * ca;
                 v.pos.x = temp_x;

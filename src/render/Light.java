@@ -7,13 +7,13 @@ import render.Vector3f.vec3;
  *
  * @author Texhnolyze
  */
-public abstract class BaseLight<T> {
+public abstract class Light<T> {
     
     boolean enabled = true;
     
     float ar, ag, ab; // ambient light intensity, base for all lights.
     
-    private BaseLight(float ar, float ag, float ab) {
+    private Light(float ar, float ag, float ab) {
         setAmbientRGB(ar, ag, ab);
     }
     
@@ -40,13 +40,13 @@ public abstract class BaseLight<T> {
     public float getAmbientGreen() {return ag;}
     public float getAmbientBlue() {return ab;}
     
-    public static class AmbientLight extends BaseLight<AmbientLight> {
+    public static class AmbientLight extends Light<AmbientLight> {
         public AmbientLight(float r, float g, float b) {
             super(r, g, b);
         }
     }
     
-    private static class NotAmbientLight<T> extends BaseLight<T> {
+    private static class NotAmbientLight<T> extends Light<T> {
         
         float dr, dg, db; // diffuse intensity
         float sr, sg, sb; // specular intensity

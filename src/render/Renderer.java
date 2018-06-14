@@ -3,9 +3,9 @@ package render;
 import java.util.ArrayList;
 import java.util.List;
 import static render.Graphics.rgb;
-import render.BaseLight.AmbientLight;
-import render.BaseLight.DirectionLight;
-import render.BaseLight.PointLight;
+import render.Light.AmbientLight;
+import render.Light.DirectionLight;
+import render.Light.PointLight;
 import static render.MathUtils.round;
 import render.Vector3f.vec3;
 
@@ -28,7 +28,7 @@ public class Renderer {
     private int curr_face_idx;
     private Face[] temp_faces = new Face[1024];
     
-    private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3();
+    private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3(), temp_vec3 = new vec3();
     
     private Camera curr_camera;
     
@@ -118,9 +118,11 @@ public class Renderer {
         float nx = f.norm().x();
         float ny = f.norm().y();
         float nz = f.norm().z();
-        f.getMediPoint(temp_vec1);
-        curr_camera.pos.sub(temp_vec1, temp_vec1).normalize();
         float r = 0f, g = 0f, b = 0f;
+        f.getMediPoint(temp_vec1);
+        vec3 medi_point = temp_vec1; // the point at which lighting will be calculated
+        curr_camera.pos.sub(medi_point, temp_vec2).normalize();
+        vec3 view_dir = temp_vec2; // vector directed at the observer
         for (AmbientLight l : ambLights) {
             if (!l.enabled) 
                 continue;
@@ -144,13 +146,40 @@ public class Renderer {
 //          represented by two triangles, the specular lighting 
 //          component may be look ridiculous, because one of the triangles 
 //          will have a color different from the other
-            l.dir_inv.reflect(nx, ny, nz, temp_vec2);
-            dp = temp_vec2.dot(temp_vec1);
+            l.dir_inv.reflect(nx, ny, nz, temp_vec3);
+            vec3 light_dir_reflected = temp_vec3; 
+            dp = light_dir_reflected.dot(view_dir);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, m.shininess);
                 r += pow * m.sr * l.sr;
                 g += pow * m.sg * l.sg;
                 b += pow * m.sb * l.sb;
+            }
+        }
+        for (PointLight l : pointLights) {
+            if (!l.enabled)
+                continue;
+            temp_vec3.set(l.pos).sub(medi_point, temp_vec3);
+            vec3 light_dir = temp_vec3; // vector directed at the point light source
+            float d_sqr = light_dir.len2(), d = (float) Math.sqrt(d_sqr);
+            float attenuation = 1f / (l.kc + l.kl * d + l.kq * d_sqr);
+            r += attenuation * m.ar * l.ar;
+            g += attenuation * m.ag * l.ag;
+            b += attenuation * m.ab * l.ab;
+            light_dir.normalize(d);
+            float dp = light_dir.dot(nx, ny, nz);
+            if (dp > 0f) {
+                r += attenuation * dp * m.dr * l.dr;
+                g += attenuation * dp * m.dg * l.dg;
+                b += attenuation * dp * m.db * l.db;
+            }
+            light_dir.reflect(nx, ny, nz, light_dir); 
+            dp = light_dir.dot(view_dir);
+            if (dp > 0f) {
+                float pow = (float) Math.pow(dp, m.shininess);
+                r += attenuation * pow * m.sr * l.sr;
+                g += attenuation * pow * m.sg * l.sg;
+                b += attenuation * pow * m.sb * l.sb;
             }
         }
         f.setTempRGB(rgb(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b));
