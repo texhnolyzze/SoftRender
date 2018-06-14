@@ -100,10 +100,10 @@ public interface Matrix4x4f {
         }
 
         void project(Vector3f v) {
-            float w_inv = -1f / (v.z());
+            float w_inv = -1f / v.z();
             v.set(
-                -v.x() * values[M00] * w_inv, // I do not know why, but if you 
-                -v.y() * values[M11] * w_inv, // do not put minus signs before v.x() and v.x(), the X and Y axes are inverted.
+                v.x() * values[M00] * w_inv, 
+                v.y() * values[M11] * w_inv,
                 (v.z() * values[M22] + values[M23]) * w_inv
             );
         }

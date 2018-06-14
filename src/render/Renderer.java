@@ -28,7 +28,7 @@ public class Renderer {
     private int curr_face_idx;
     private Face[] temp_faces = new Face[1024];
     
-    private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3(), temp_vec3 = new vec3();
+    private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3();
     
     private Camera curr_camera;
     
@@ -118,8 +118,8 @@ public class Renderer {
         float nx = f.norm().x();
         float ny = f.norm().y();
         float nz = f.norm().z();
-        f.getAVGPoint(temp_vec1);
-        temp_vec1.sub(curr_camera.pos, temp_vec2);
+        f.getMediPoint(temp_vec1);
+        curr_camera.pos.sub(temp_vec1, temp_vec1).normalize();
         float r = 0f, g = 0f, b = 0f;
         for (AmbientLight l : ambLights) {
             if (!l.enabled) 
@@ -134,14 +134,18 @@ public class Renderer {
             r += m.ar * l.ar;
             g += m.ag * l.ag;
             b += m.ab * l.ab;
-            float dp = l.dir.dot(nx, ny, nz);
-            if (dp < 0f) {
-                r += -dp * m.dr * l.dr;
-                g += -dp * m.dg * l.dg;
-                b += -dp * m.db * l.db;
+            float dp = l.dir_inv.dot(nx, ny, nz);
+            if (dp > 0f) {
+                r += dp * m.dr * l.dr;
+                g += dp * m.dg * l.dg;
+                b += dp * m.db * l.db;
             }
-            l.dir.reflect(nx, ny, nz, temp_vec3);
-            dp = temp_vec3.dot(temp_vec2);
+//          note that, for example, for a cube whose side is 
+//          represented by two triangles, the specular lighting 
+//          component may be look ridiculous, because one of the triangles 
+//          will have a color different from the other
+            l.dir_inv.reflect(nx, ny, nz, temp_vec2);
+            dp = temp_vec2.dot(temp_vec1);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, m.shininess);
                 r += pow * m.sr * l.sr;

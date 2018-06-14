@@ -87,6 +87,10 @@ public abstract class BaseLight<T> {
         
         vec3 dir = new vec3();
 
+//      this vector also represents the position of the light source, 
+//      if we multiply its components by a large number
+        vec3 dir_inv = new vec3(); 
+
         public DirectionLight(float ar, float ag, float ab, 
                               float dr, float dg, float db, 
                               float sr, float sg, float sb,
@@ -103,6 +107,9 @@ public abstract class BaseLight<T> {
             dir.x = nx * len_inv;
             dir.y = ny * len_inv;
             dir.z = nz * len_inv;
+            dir_inv.x = -dir.x;
+            dir_inv.y = -dir.y;
+            dir_inv.z = -dir.z;
             return this;
         }
         

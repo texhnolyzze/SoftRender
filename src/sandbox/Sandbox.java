@@ -32,16 +32,21 @@ public class Sandbox {
         Renderer r = new Renderer(g);
         Rasterizer3D rast = r.getRasterizer();
         Camera c = new Camera(10f, 1000f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, 0, -50);
+        c.setPosition(30f, 30, 30);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(-10);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(-30));
+        c.moveInDirection(0);
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
         c.updateViewMatrix();
-        M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
+        M m = fromOBJ(new File("src/sandbox/obj/cube.obj"));
         MI instance = new MI();
         instance.m = m;
-        r.addAmbientLight(new AmbientLight(0.5f, 0.5f, 0.5f));
-        r.addDirectionLight(new DirectionLight(0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 0.2f, 1f, 1f, 1f));
+        r.addAmbientLight(new AmbientLight(0.3f, 0.3f, 0.3f));
+        r.addDirectionLight(new DirectionLight(
+            0.3f, 0.3f, 0.3f,
+            0.3f, 0.3f, 0.3f, 
+            0.6f, 0.6f, 0.6f, 
+            -1f, -1f, -1f)
+        );
         long t = System.nanoTime();
         r.render(c, instance, ShadeMode.FLAT);
         System.out.println(System.nanoTime() - t);

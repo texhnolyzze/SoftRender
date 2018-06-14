@@ -45,6 +45,13 @@ public interface Vector3f {
             return this;
         }
         
+        vec3 set(Vector3f v) {
+            x = v.x();
+            y = v.y();
+            z = v.z();
+            return this;
+        }
+        
         vec3 add(float dx, float dy, float dz) {
             x += dx;
             y += dy;
@@ -141,6 +148,20 @@ public interface Vector3f {
                 x * m[M01] + y * m[M11] + z * m[M21] + m[M31],
                 x * m[M02] + y * m[M12] + z * m[M22] + m[M32]
             );
+        }
+        
+        vec3 project(mat4 prjMat) {
+            float w_inv = -1f / z;
+            return set(
+                x * prjMat.values[M00] * w_inv, 
+                y * prjMat.values[M11] * w_inv,
+                (z * prjMat.values[M22] + prjMat.values[M23]) * w_inv
+            );
+        }
+
+        @Override
+        public String toString() {
+            return "(" + x + ", " + y + ", " + z + ')';
         }
         
     }

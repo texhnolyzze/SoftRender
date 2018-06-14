@@ -17,7 +17,7 @@ public interface Face {
     int getTempRGB();
     void setTempRGB(int rgb);
     
-    default Vector3f getAVGPoint(Vector3f dest) {
+    default Vector3f getMediPoint(Vector3f dest) {
         return dest.set(
             (v0().pos().x() + v1().pos().x() + v2().pos().x()) / 3f, 
             (v0().pos().y() + v1().pos().y() + v2().pos().y()) / 3f, 

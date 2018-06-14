@@ -203,13 +203,13 @@ public class Camera {
     }
     
     final void project(Iterable<Vertex> vertices, int w, int h) {
-        float half_w_minus_one = (float) 0.5f * (w - 1f);
-        float half_h_minus_one = (float) 0.5f * (h - 1f);
+        float half_w_minus_one = 0.5f * (w - 1f);
+        float half_h_minus_one = 0.5f * (h - 1f);
         for (Vertex v : vertices) {
             projectionMatrix.project(v.pos());
             v.pos().set(
                 (1f + v.pos().x()) * half_w_minus_one, 
-                h - (1f + v.pos().y()) * half_h_minus_one - 1f, 
+                (1f + v.pos().y()) * half_h_minus_one, 
                 v.pos().z()
             );
         }
@@ -235,16 +235,16 @@ public class Camera {
         }
         
         boolean intersects(AABB aabb) {
+            
             bounding_pos000.set(aabb.posX(), aabb.posY(), aabb.posZ());
             bounding_w.set(aabb.width(), 0f, 0f);
             bounding_h.set(0f, aabb.height(), 0f);
             bounding_d.set(0f, 0f, aabb.depth());
-            viewMatrix.toViewSpace(bounding_pos000);
-
-
-            viewMatrix.normalToViewSpace(bounding_w);
-            viewMatrix.normalToViewSpace(bounding_h);
-            viewMatrix.normalToViewSpace(bounding_d);
+            
+            bounding_pos000.mul4x3(viewMatrix);
+            bounding_w.mul3x3(viewMatrix);
+            bounding_h.mul3x3(viewMatrix);
+            bounding_d.mul3x3(viewMatrix);
             
             float min_x = Float.POSITIVE_INFINITY, max_x = Float.NEGATIVE_INFINITY; 
             float min_y = Float.POSITIVE_INFINITY, max_y = Float.NEGATIVE_INFINITY;
@@ -290,14 +290,14 @@ public class Camera {
             
             bounding_pos000.set(min_x, min_y, min_z);
             bounding_pos111.set(max_x, max_y, max_z);
-            
-            projectionMatrix.project(bounding_pos000);
-            projectionMatrix.project(bounding_pos111);
+            bounding_pos000.project(projectionMatrix);
+            bounding_pos111.project(projectionMatrix);
             
             return MathUtils.cubesIntersects(
                 -1f, -1f, -1f, 1f, 1f, 1f, 
-                bounding_pos000.x, bounding_pos000.y, bounding_pos000.z, 
-                bounding_pos111.x, bounding_pos111.y, bounding_pos111.z
+                // axises are inverted
+                bounding_pos111.x, bounding_pos111.y, bounding_pos000.z, 
+                bounding_pos000.x, bounding_pos000.y, bounding_pos111.z
             );
             
         }
