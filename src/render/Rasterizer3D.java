@@ -1,7 +1,9 @@
 package render;
 
+import java.util.Arrays;
 import static render.Graphics.*;
 import static render.MathUtils.*;
+import static render.MathUtils.Fixed.*;
 
 /**
  *
@@ -24,10 +26,10 @@ public final class Rasterizer3D {
     private int temp_int;
     private float temp_float;
     
-    private int code_1, code_2;
+    private int temp_code1, temp_code2;
+    
     private int line_x1, line_y1, line_x2, line_y2;
     private float line_z1, line_z2;
-    private float line_r1, line_g1, line_b1, line_r2, line_g2, line_b2;
     
     private float[] z_buff;
     private float[] sqrt_table;
@@ -35,6 +37,8 @@ public final class Rasterizer3D {
     public Rasterizer3D(Graphics g) {
         this.g = g;
         updateBounds();
+        for (int i = 0; i < tri_points.length; i++)
+            tri_points[i] = new TriPoint();
     }
     
     public Graphics getGraphics() {
@@ -78,16 +82,525 @@ public final class Rasterizer3D {
         }
     }
     
-    public void strokeTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
-        g.setColor(rgb);
+    public void strokeTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
         line(x1, y1, z1, x2, y2, z2);
         line(x2, y2, z2, x3, y3, z3);
         line(x3, y3, z3, x1, y1, z1);
     }
     
-    // most of logic stolen from: http://grafika.me/node/67
-    public void fillTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3, int rgb) {
-        g.setColor(rgb);
+    public void fillTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
+        code1 = code(x1, y1);
+        code2 = code(x2, y2);
+        code3 = code(x3, y3);
+        if ((code1 | code2 | code3) == 0) {// all points are inside the viewport
+            if (y1 < y3) {
+                if (y2 < y3) {
+                    fill_tri(
+                        x1, y1, z1, 
+                        x2, y2, z2, 
+                        x3, y3, z3
+                    );
+                } else {
+                    fill_tri(
+                        x1, y1, z1, 
+                        x3, y3, z3, 
+                        x2, y2, z2
+                    );
+                }
+            } else {
+                if (y1 > y2) {
+                    fill_tri(
+                        x3, y3, z3, 
+                        x2, y2, z2,
+                        x1, y1, z1
+                    );
+                } else {
+                    fill_tri(
+                        x3, y3, z3,
+                        x1, y1, z1, 
+                        x2, y2, z2
+                    );
+                }
+            }
+        } else if ((code1 & code2 & code3) != 0) { // triangle is not visible
+            return;
+        } else {
+            this.z1 = z1;
+            this.z2 = z2;
+            this.z3 = z3;
+            clip_triangle(x1, y1, x2, y2, x3, y3, false);
+            TriPoint p0 = tri_points[0];
+            for (int i = 1; i < n - 1; i++) {
+                TriPoint p1 = tri_points[i];
+                TriPoint p2 = tri_points[i + 1];
+                fill_tri(
+                    p2.x, p2.y, p2.z,
+                    p1.x, p1.y, p1.z, 
+                    p0.x, p0.y, p0.z
+                );
+            }
+        }
+    }
+    
+    public void fillTriangleInterpolateColors(
+            int x1, int y1, float z1, float r1, float g1, float b1, 
+            int x2, int y2, float z2, float r2, float g2, float b2, 
+            int x3, int y3, float z3, float r3, float g3, float b3) {
+
+        code1 = code(x1, y1);
+        code2 = code(x2, y2);
+        code3 = code(x3, y3);
+        if ((code1 | code2 | code3) == 0) { // all points are inside the viewport
+            if (y1 < y3) {
+                if (y2 < y3) {
+                    fill_tri_interpolate_color(
+                        x1, y1, z1, make_fixed_8x24(255f * r1), make_fixed_8x24(255f * g1), make_fixed_8x24(255f * b1),
+                        x2, y2, z2, make_fixed_8x24(255f * r2), make_fixed_8x24(255f * g2), make_fixed_8x24(255f * b2), 
+                        x3, y3, z3, make_fixed_8x24(255f * r3), make_fixed_8x24(255f * g3), make_fixed_8x24(255f * b3)
+                    );
+                } else {
+                    fill_tri_interpolate_color(
+                        x1, y1, z1, make_fixed_8x24(255f * r1), make_fixed_8x24(255f * g1), make_fixed_8x24(255f * b1), 
+                        x3, y3, z3, make_fixed_8x24(255f * r3), make_fixed_8x24(255f * g3), make_fixed_8x24(255f * b3), 
+                        x2, y2, z2, make_fixed_8x24(255f * r2), make_fixed_8x24(255f * g2), make_fixed_8x24(255f * b2)
+                    );
+                }
+            } else {
+                if (y1 > y2) {
+                    fill_tri_interpolate_color(
+                        x3, y3, z3, make_fixed_8x24(255f * r3), make_fixed_8x24(255f * g3), make_fixed_8x24(255f * b3), 
+                        x2, y2, z2, make_fixed_8x24(255f * r2), make_fixed_8x24(255f * g2), make_fixed_8x24(255f * b2), 
+                        x1, y1, z1, make_fixed_8x24(255f * r1), make_fixed_8x24(255f * g1), make_fixed_8x24(255f * b1)
+                    );
+                } else {
+                    fill_tri_interpolate_color(
+                        x3, y3, z3, make_fixed_8x24(255f * r3), make_fixed_8x24(255f * g3), make_fixed_8x24(255f * b3), 
+                        x1, y1, z1, make_fixed_8x24(255f * r1), make_fixed_8x24(255f * g1), make_fixed_8x24(255f * b1), 
+                        x2, y2, z2, make_fixed_8x24(255f * r2), make_fixed_8x24(255f * g2), make_fixed_8x24(255f * b2)
+                    );
+                }
+            }
+        }
+        else if ((code1 & code2 & code3) != 0) // triangle is not visible
+            return;
+        else {
+            this.r1 = r1;
+            this.r2 = r2;
+            this.r3 = r3;
+            this.g1 = g1;
+            this.g2 = g2;
+            this.g3 = g3;
+            this.b1 = b1;
+            this.b2 = b2;
+            this.b3 = b3;
+            this.z1 = z1;
+            this.z2 = z2;
+            this.z3 = z3;
+            clip_triangle(x1, y1, x2, y2, x3, y3, true);
+            TriPoint p0 = tri_points[0];
+            int r0 = make_fixed_8x24(255f * p0.r);
+            int g0 = make_fixed_8x24(255f * p0.g);
+            int b0 = make_fixed_8x24(255f * p0.b);
+            for (int i = 1; i < n - 1; i++) {
+                TriPoint p1 = tri_points[i];
+                TriPoint p2 = tri_points[i + 1];
+                fill_tri_interpolate_color(
+                    p2.x, p2.y, p2.z, make_fixed_8x24(255f * p2.r), make_fixed_8x24(255f * p2.g), make_fixed_8x24(255f * p2.b),
+                    p1.x, p1.y, p1.z, make_fixed_8x24(255f * p1.r), make_fixed_8x24(255f * p1.g), make_fixed_8x24(255f * p1.b), 
+                    p0.x, p0.y, p0.z, r0, g0, b0
+                );
+            }
+        }
+    }
+    
+//  these variables need for triangle clipping
+    private float r1, g1, b1;
+    private float r2, g2, b2;
+    private float r3, g3, b3;
+    private float z1, z2, z3;
+    private int code1, code2, code3;
+    
+    private int n;
+    private final TriPoint[] tri_points = new TriPoint[10];
+    
+//  stores in the "tri_points" array the clipped points belonging to the triangle 
+//  in the counterclockwise order
+    private void clip_triangle(int x1, int y1, int x2, int y2, int x3, int y3, final boolean interpolate_colors) {
+        n = 0;
+        int max_y_index = -1;
+        temp_code1 = code1;
+        temp_code2 = code2;
+        clip0(x1, y1, x2, y2);
+        if (line_x1 != -1) {
+            float dist_inv = -1f;
+            tri_points[0].x = line_x1;
+            tri_points[0].y = line_y1;
+            tri_points[1].x = line_x2;
+            tri_points[1].y = line_y2;
+            
+            if (line_x1 != x1 || line_y1 != y1) { // need to recalculate depth and color
+                dist_inv = 1f / MathUtils.dist(x1, y1, x2, y2);
+                float coeff = dist_inv * MathUtils.dist(x1, y1, line_x1, line_y1);
+                tri_points[0].z = z1 + (z2 - z1) * coeff;
+                if (interpolate_colors) {
+                    tri_points[0].r = r1 + (r2 - r1) * coeff;
+                    tri_points[0].g = g1 + (g2 - g1) * coeff;
+                    tri_points[0].b = b1 + (b2 - b1) * coeff;
+                }
+            } else {
+                tri_points[0].z = z1;
+                if (interpolate_colors) {
+                    tri_points[0].r = r1;
+                    tri_points[0].g = g1;
+                    tri_points[0].b = b1;
+                }
+            }
+            
+            if (line_x2 != x2 || line_y2 != y2) {
+                float coeff;
+                if (dist_inv == -1f)
+                    coeff = MathUtils.dist(x2, y2, line_x2, line_y2) / MathUtils.dist(x1, y1, x2, y2);
+                else
+                    coeff = dist_inv * MathUtils.dist(x2, y2, line_x2, line_y2);
+                tri_points[1].z = z2 + (z1 - z2) * coeff;
+                if (interpolate_colors) {
+                    tri_points[1].r = r2 + (r1 - r2) * coeff;
+                    tri_points[1].g = g2 + (g1 - g2) * coeff;
+                    tri_points[1].b = b2 + (b1 - b2) * coeff;
+                }
+            } else {
+                tri_points[1].z = z2;
+                if (interpolate_colors) {
+                    tri_points[1].r = r2;
+                    tri_points[1].g = g2;
+                    tri_points[1].b = b2;
+                }
+            }
+            
+            n = 2;
+        } 
+        
+        temp_code1 = code2;
+        temp_code2 = code3;
+        clip0(x2, y2, x3, y3);
+        if (line_x1 != -1) {
+            if (n == 0) {
+                
+                float dist_inv = -1f;
+                
+                tri_points[0].x = line_x1;
+                tri_points[0].y = line_y1;
+                tri_points[1].x = line_x2;
+                tri_points[1].y = line_y2;
+                
+                if (line_x1 != x2 || line_y1 != y2) { 
+                    dist_inv = 1f / MathUtils.dist(x2, y2, x3, y3);
+                    float coeff = dist_inv * MathUtils.dist(x2, y2, line_x1, line_y1);
+                    tri_points[0].z = z2 + (z3 - z2) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[0].r = r2 + (r3 - r2) * coeff;
+                        tri_points[0].g = g2 + (g3 - g2) * coeff;
+                        tri_points[0].b = b2 + (b3 - b2) * coeff;
+                    }
+                } else {
+                    tri_points[0].z = z2;
+                    if (interpolate_colors) {
+                        tri_points[0].r = r2;
+                        tri_points[0].g = g2;
+                        tri_points[0].b = b2;
+                    }
+                }
+            
+                if (line_x2 != x3 || line_y2 != y3) {
+                    float coeff;
+                    if (dist_inv == -1f)
+                        coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                    else
+                        coeff = dist_inv * MathUtils.dist(x3, y3, line_x2, line_y2);
+                    tri_points[1].z = z3 + (z2 - z3) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[1].r = r3 + (r2 - r3) * coeff;
+                        tri_points[1].g = g3 + (g2 - g3) * coeff;
+                        tri_points[1].b = b3 + (b2 - b3) * coeff;
+                    }
+                } else {
+                    tri_points[1].z = z3;
+                    if (interpolate_colors) {
+                        tri_points[1].r = r3;
+                        tri_points[1].g = g3;
+                        tri_points[1].b = b3;
+                    }
+                }
+                
+                n = 2;
+                
+            } else {
+                if (tri_points[1].x == line_x1 && tri_points[1].y == line_y1) {
+
+                    tri_points[2].x = line_x2;
+                    tri_points[2].y = line_y2;
+                    
+                    if (line_x2 != x3 || line_y2 != y3) {
+                        float coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                        tri_points[2].z = z3 + (z2 - z3) * coeff;
+                        if (interpolate_colors) {
+                            tri_points[2].r = r3 + (r2 - r3) * coeff;
+                            tri_points[2].g = g3 + (g2 - g3) * coeff;
+                            tri_points[2].b = b3 + (b2 - b3) * coeff;
+                        }
+                    }
+                    
+                    n = 3;
+                    
+                } else {
+
+                    tri_points[2].x = line_x1;
+                    tri_points[2].y = line_y1;
+                    tri_points[3].x = line_x2;
+                    tri_points[3].y = line_y2;
+                    
+                    float dist_inv = -1f;
+                    
+                    if (line_x1 != x2 || line_y1 != y2) { 
+                        dist_inv = 1f / MathUtils.dist(x2, y2, x3, y3);
+                        float coeff = dist_inv * MathUtils.dist(x2, y2, line_x1, line_y1);
+                        tri_points[2].z = z2 + (z3 - z2) * coeff;
+                        if (interpolate_colors) {
+                            tri_points[2].r = r2 + (r3 - r2) * coeff;
+                            tri_points[2].g = g2 + (g3 - g2) * coeff;
+                            tri_points[2].b = b2 + (b3 - b2) * coeff;
+                        }
+                    } else {
+                        tri_points[2].z = z2;
+                        if (interpolate_colors) {
+                            tri_points[2].r = r2;
+                            tri_points[2].g = g2;
+                            tri_points[2].b = b2;
+                        }
+                    }
+
+                    if (line_x2 != x3 || line_y2 != y3) {
+                    
+                        float coeff;
+                        if (dist_inv == -1f)
+                            coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                        else
+                            coeff = dist_inv * MathUtils.dist(x3, y3, line_x2, line_y2);
+                        tri_points[3].z = z3 + (z2 - z3) * coeff;
+                        if (interpolate_colors) {
+                            tri_points[3].r = r3 + (r2 - r3) * coeff;
+                            tri_points[3].g = g3 + (g2 - g3) * coeff;
+                            tri_points[3].b = b3 + (b2 - b3) * coeff;
+                        }
+                    } else {
+
+                        tri_points[3].z = z3;
+                        if (interpolate_colors) {
+                            tri_points[3].r = r3;
+                            tri_points[3].g = g3;
+                            tri_points[3].b = b3;
+                        }
+                    }
+                    
+                    n = 4;
+                    
+                }
+                
+            }
+        }
+        
+        temp_code1 = code3;
+        temp_code2 = code1;
+        clip0(x3, y3, x1, y1);
+        if (line_x1 != -1) {
+
+            if (n == 0) {
+                float dist_inv = -1f;
+                tri_points[0].x = line_x1;
+                tri_points[0].y = line_y1;
+                tri_points[1].x = line_x2;
+                tri_points[1].y = line_y2;
+                
+                if (line_x1 != x3 || line_y1 != y3) { 
+                    dist_inv = 1f / MathUtils.dist(x3, y3, x1, y1);
+                    float coeff = dist_inv * MathUtils.dist(x3, y3, line_x1, line_y1);
+                    tri_points[0].z = z3 + (z1 - z3) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[0].r = r3 + (r1 - r3) * coeff;
+                        tri_points[0].g = g3 + (g1 - g3) * coeff;
+                        tri_points[0].b = b3 + (b1 - b3) * coeff;
+                    }
+                } else {
+                    tri_points[0].z = z3;
+                    if (interpolate_colors) {
+                        tri_points[0].r = r3;
+                        tri_points[0].g = g3;
+                        tri_points[0].b = b3;
+                    }
+                }
+            
+                if (line_x2 != x1 || line_y2 != y1) {
+                    float coeff;
+                    if (dist_inv == -1f)
+                        coeff = MathUtils.dist(x1, y1, line_x2, line_y2) / MathUtils.dist(x3, y3, x1, y1);
+                    else
+                        coeff = dist_inv * MathUtils.dist(x1, y1, line_x2, line_y2);
+                    tri_points[1].z = z1 + (z3 - z1) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[1].r = r1 + (r3 - r1) * coeff;
+                        tri_points[1].g = g1 + (g3 - g1) * coeff;
+                        tri_points[1].b = b1 + (b3 - b1) * coeff;
+                    }
+                } else {
+                    tri_points[1].z = z1;
+                    if (interpolate_colors) {
+                        tri_points[1].r = r1;
+                        tri_points[1].g = g1;
+                        tri_points[1].b = b1;
+                    }
+                }
+                
+                n = 2;
+                
+            } else {
+                float dist_inv = -1f;
+                if (tri_points[n - 1].x != line_x1 || tri_points[n - 1].y != line_y1) {
+
+                    dist_inv = 1f / MathUtils.dist(x3, y3, x1, y1);
+                    float coeff = dist_inv * MathUtils.dist(x3, y3, line_x1, line_y1);
+                    tri_points[n].x = line_x1;
+                    tri_points[n].y = line_y1;
+                    tri_points[n].z = z3 + (z1 - z3) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[n].r = r3 + (r1 - r3) * coeff;
+                        tri_points[n].g = g3 + (g1 - g3) * coeff;
+                        tri_points[n].b = b3 + (b1 - b3) * coeff;
+                    }
+                    n++;
+                } 
+                if (tri_points[0].x != line_x2 || tri_points[0].y != line_y2) {
+                    float coeff;
+                    if (dist_inv == -1f)
+                        coeff = MathUtils.dist(x1, y1, line_x2, line_y2) / MathUtils.dist(x3, y3, x1, y1);
+                    else
+                        coeff = dist_inv * MathUtils.dist(x1, y1, line_x2, line_y2);
+                    tri_points[n].x = line_x2;
+                    tri_points[n].y = line_y2;
+                    tri_points[n].z = z1 + (z3 - z1) * coeff;
+                    if (interpolate_colors) {
+                        tri_points[n].r = r1 + (r3 - r1) * coeff;
+                        tri_points[n].g = g1 + (g3 - g1) * coeff;
+                        tri_points[n].b = b1 + (b3 - b1) * coeff;
+                    }
+                    n++;
+                }
+            }
+        }
+//      now "tri_points" array contains all intersection points of triangle
+//      with the viewport, and "n" variable contains the number of this points.
+        v1v2_x = x2 - x1;
+        v1v2_y = y2 - y1;
+        v1v3_x = x3 - x1;
+        v1v3_y = y3 - y1;
+        temp_det = v1v2_x * v1v3_y - v1v2_y * v1v3_x;
+
+        if (test_point(-x1, -y1)) { // point (0, 0) belongs to triangle
+            tri_points[n].x = 0;
+            tri_points[n].y = 0;
+            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2);
+            if (interpolate_colors) {
+                tri_points[n].r = (r1 + (r2 - r1) * temp_k1) + (r1 + (r3 - r1) * temp_k2);
+                tri_points[n].g = (g1 + (g2 - g1) * temp_k1) + (g1 + (g3 - g1) * temp_k2);
+                tri_points[n].b = (b1 + (b2 - b1) * temp_k1) + (b1 + (b3 - b1) * temp_k2);                
+            }
+            n++;
+        }
+
+        if (test_point(-x1, h - y1 - 1f)) { // point (0, h - 1) belongs to triangle
+            max_y_index = n; // small optimisation
+            tri_points[n].x = 0;
+            tri_points[n].y = h - 1;
+            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2);
+            if (interpolate_colors) {
+                tri_points[n].r = (r1 + (r2 - r1) * temp_k1) + (r1 + (r3 - r1) * temp_k2);
+                tri_points[n].g = (g1 + (g2 - g1) * temp_k1) + (g1 + (g3 - g1) * temp_k2);
+                tri_points[n].b = (b1 + (b2 - b1) * temp_k1) + (b1 + (b3 - b1) * temp_k2);                
+            }
+            n++;
+        }
+
+        if (test_point(w - x1 - 1f, -y1)) { // point (w - 1, 0) belongs to triangle
+            tri_points[n].x = w - 1;
+            tri_points[n].y = 0;
+            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2);
+            if (interpolate_colors) {
+                tri_points[n].r = (r1 + (r2 - r1) * temp_k1) + (r1 + (r3 - r1) * temp_k2);
+                tri_points[n].g = (g1 + (g2 - g1) * temp_k1) + (g1 + (g3 - g1) * temp_k2);
+                tri_points[n].b = (b1 + (b2 - b1) * temp_k1) + (b1 + (b3 - b1) * temp_k2);                
+            }
+            n++;
+        }
+
+        if (test_point(w - x1 - 1f, h - y1 - 1f)) { // point (w - 1, h - 1) belongs to triangle
+            tri_points[n].x = w - 1;
+            tri_points[n].y = h - 1;
+            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2);
+            if (interpolate_colors) {
+                tri_points[n].r = (r1 + (r2 - r1) * temp_k1) + (r1 + (r3 - r1) * temp_k2);
+                tri_points[n].g = (g1 + (g2 - g1) * temp_k1) + (g1 + (g3 - g1) * temp_k2);
+                tri_points[n].b = (b1 + (b2 - b1) * temp_k1) + (b1 + (b3 - b1) * temp_k2);                
+            }
+            n++;
+        }
+        
+        if (max_y_index == -1) {
+            max_y_index = 0;
+            for (int i = 1; i < n; i++) {
+                if ((tri_points[i].y > tri_points[max_y_index].y) || (tri_points[i].y == tri_points[max_y_index].y && tri_points[i].x < tri_points[max_y_index].x)) {
+                    max_y_index = i;
+                }
+            }
+        }
+        
+        TriPoint temp = tri_points[0];
+        tri_points[0] = tri_points[max_y_index];
+        tri_points[max_y_index] = temp;
+        
+        final TriPoint max_y = tri_points[0];
+        try {
+        Arrays.sort(tri_points, 1, n, (TriPoint p1, TriPoint p2) -> {
+            return Double.compare(p1.angle_rel_to(max_y), p2.angle_rel_to(max_y));
+        });
+        } catch (Exception ex) {
+        }
+        
+        for (int i = 0; i < n; i++) tri_points[i].angle_calc = false;
+        
+    }
+    
+    private float temp_det;
+    private float temp_k1, temp_k2; 
+    private float v1v2_x, v1v2_y, v1v3_x, v1v3_y;
+
+    private boolean test_point(float px, float py) { 
+        float det1 = v1v2_x * py - v1v2_y * px;
+        temp_k1 = det1 / temp_det;
+        if (temp_k1 >= 0f && temp_k1 <= 1f) {
+            float det2 = v1v3_y * px - v1v3_x * py;
+            temp_k2 = det2 / temp_det;
+            if (temp_k2 >= 0f && temp_k2 <= 1f && temp_k1 + temp_k2 <= 1f) {
+                return true;
+            }
+        }
+        return false;
+    }
+    
+//  y1 <= y3 AND y2 <= y3, all point are fully inside viewport
+    private void fill_tri(
+            int x1, int y1, float z1, 
+            int x2, int y2, float z2, 
+            int x3, int y3, float z3) {
+        
         if (y2 < y1) {
             temp_x = x2;
             temp_y = y2;
@@ -99,250 +612,169 @@ public final class Rasterizer3D {
             y1 = temp_y;
             z1 = temp_float;
         }
-        if (y3 < y1) {
-            temp_x = x3;
-            temp_y = y3;
-            temp_float = z3;
-            x3 = x1;
-            y3 = y1;
-            z3 = z1;
-            x1 = temp_x;
-            y1 = temp_y;
-            z1 = temp_float;
-        }
-        if (y3 < y2) {
-            temp_x = x3;
-            temp_y = y3;
-            temp_float = z3;
-            x3 = x2;
-            y3 = y2;
-            z3 = z2;
-            x2 = temp_x;
-            y2 = temp_y;
-            z2 = temp_float;
-        }
-        float dx13 = 0f, dx12 = 0f, dx23 = 0f;
+        int dx13 = 0, dx12 = 0, dx23 = 0;
         float dz13 = 0f, dz12 = 0f, dz23 = 0f;
         if (y3 != y1) {
-            dx13 = (float) (x3 - x1) / (y3 - y1);
+            dx13 = make_fixed_16x16(x3 - x1) / (y3 - y1);
             dz13 = (z3 - z1) / (y3 - y1);
         }
         if (y2 != y1) {
-            dx12 = (float) (x2 - x1) / (y2 - y1);
+            dx12 = make_fixed_16x16(x2 - x1) / (y2 - y1);
             dz12 = (z2 - z1) / (y2 - y1);
         }
         if (y3 != y2) {
-            dx23 = (float) (x3 - x2) / (y3 - y2);
+            dx23 = make_fixed_16x16(x3 - x2) / (y3 - y2);
             dz23 = (z3 - z2) / (y3 - y2);
         }
-        float _dx13 = dx13;
+        int _dx13 = dx13;
         float _dz13 = dz13;
         if (dx13 > dx12) {
-            temp_float = dx13;
+            temp_int = dx13;
             dx13 = dx12;
-            dx12 = temp_float;
+            dx12 = temp_int;
             temp_float = dz13;
             dz13 = dz12;
             dz12 = temp_float;
         }
         float lz = z1, rz = z1;
-        float wx1 = x1, wx2 = x1;
+        int lx = make_fixed_16x16(x1), rx = lx;
         for (int y = y1; y < y2; y++) {
-            int lx = round(wx1);
-            int rx = round(wx2);
-            clip(lx, y, rx, y);
-            if (line_x1 != -1) { // scanline is outside the screen
-                line_z1 = lz;
-                line_z2 = rz;
-                if (line_x1 != lx) 
-                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
-                if (line_x2 != rx) 
-                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
-                hor_line(line_x1, line_z1, line_x2, line_z2, y);
-            }
-            wx1 += dx13;
-            wx2 += dx12;
+            hor_line(
+                round_fixed_16x16(lx), lz, 
+                round_fixed_16x16(rx), rz, y
+            );
+            lx += dx13;
+            rx += dx12;
             lz += dz13;
             rz += dz12;
         }
         if (y1 == y2) {
             if (x2 < x1) {
-                wx1 = x2;
-                wx2 = x1;
-                lz = z2;
+                rx = lx;
+                lx = make_fixed_16x16(x2);
                 rz = z1;
-                temp_float = _dx13;
+                lz = z2;
+                temp_int = _dx13;
                 _dx13 = dx23;
-                dx23 = temp_float;
+                dx23 = temp_int;
                 temp_float = _dz13;
                 _dz13 = dz23;
                 dz23 = temp_float;
             } else {
-                wx1 = x1;
-                wx2 = x2;
-                lz = z1;
+                rx = make_fixed_16x16(x2);
                 rz = z2;
             }
         } else {
             if (_dx13 < dx23) {
-                temp_float = _dx13;
+                temp_int = _dx13;
                 _dx13 = dx23;
-                dx23 = temp_float;
+                dx23 = temp_int;
                 temp_float = _dz13;
                 _dz13 = dz23;
                 dz23 = temp_float;
             }
         }
         for (int y = y2; y <= y3; y++) {
-            int lx = round(wx1);
-            int rx = round(wx2);
-            clip(lx, y, rx, y);
-            if (line_x1 != -1) {
-                line_z1 = lz;
-                line_z2 = rz;
-                if (line_x1 != lx)
-                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
-                if (line_x2 != rx)
-                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
-                hor_line(line_x1, line_z1, line_x2, line_z2, y);
-            }
-            wx1 += _dx13;
-            wx2 += dx23;
+            hor_line(
+                round_fixed_16x16(lx), lz, 
+                round_fixed_16x16(rx), rz, y
+            );
+            lx += _dx13;
+            rx += dx23;
             lz += _dz13;
             rz += dz23;
         }
     }
     
-    
-    public void fillTriangleInterpolateColors(int x1, int y1, float z1, int rgb1, int x2, int y2, float z2, int rgb2, int x3, int y3, float z3, int rgb3) {
-        if (y3 < y2) {
-            temp_x = x3;
-            temp_y = y3;
-            temp_float = z3;
-            temp_int = rgb3;
-            x3 = x2;
-            y3 = y2;
-            z3 = z2;
-            rgb3 = rgb2;
-            x2 = temp_x;
-            y2 = temp_y;
-            z2 = temp_float;
-            rgb2 = temp_int;
-        }
-        if (y3 < y1) {
-            temp_x = x3;
-            temp_y = y3;
-            temp_float = z3;
-            temp_int = rgb3;
-            x3 = x1;
-            y3 = y1;
-            z3 = z1;
-            rgb3 = rgb1;
-            x1 = temp_x;
-            y1 = temp_y;
-            z1 = temp_float;
-            rgb1 = temp_int;
-        }
+//  y1 <= y3 AND y2 <= y3, all points are fully inside viewport
+//  color values are fixed point numbers
+    private void fill_tri_interpolate_color(
+            int x1, int y1, float z1, int r1, int g1, int b1, 
+            int x2, int y2, float z2, int r2, int g2, int b2, 
+            int x3, int y3, float z3, int r3, int g3, int b3) {
+        
         if (y2 < y1) {
             temp_x = x2;
             temp_y = y2;
             temp_float = z2;
-            temp_int = rgb2;
             x2 = x1;
             y2 = y1;
             z2 = z1;
-            rgb2 = rgb1;
             x1 = temp_x;
             y1 = temp_y;
             z1 = temp_float;
-            rgb1 = temp_int;
+            temp_int = r2;
+            r2 = r1;
+            r1 = temp_int;
+            temp_int = g2;
+            g2 = g1;
+            g1 = temp_int;
+            temp_int = b2;
+            b2 = b1;
+            b1 = temp_int;
         }
-        float dx13 = 0f, dx12 = 0f, dx23 = 0f;
+        int dx13 = 0, dx12 = 0, dx23 = 0;
+        int dr13 = 0, dr12 = 0, dr23 = 0;
+        int dg13 = 0, dg12 = 0, dg23 = 0;
+        int db13 = 0, db12 = 0, db23 = 0;
         float dz13 = 0f, dz12 = 0f, dz23 = 0f;
-        float dr13 = 0f, dr12 = 0f, dr23 = 0f;
-        float dg13 = 0f, dg12 = 0f, dg23 = 0f;
-        float db13 = 0f, db12 = 0f, db23 = 0f;
         if (y3 != y1) {
-            float dy = y3 - y1;
-            dx13 = (float) (x3 - x1) / dy;
+            int dy = y3 - y1;
+            dx13 = make_fixed_16x16(x3 - x1) / dy;
+            dr13 = (r3 - r1) / dy;
+            dg13 = (g3 - g1) / dy;
+            db13 = (b3 - b1) / dy;
             dz13 = (z3 - z1) / dy;
-            dr13 = ((float) red(rgb3) - red(rgb1)) / dy;
-            dg13 = ((float) green(rgb3) - green(rgb1)) / dy;
-            db13 = ((float) blue(rgb3) - blue(rgb1)) / dy;
         }
         if (y2 != y1) {
-            float dy = y2 - y1;
-            dx12 = (float) (x2 - x1) / dy;
+            int dy = y2 - y1;
+            dx12 = make_fixed_16x16(x2 - x1) / dy;
+            dr12 = (r2 - r1) / dy;
+            dg12 = (g2 - g1) / dy;
+            db12 = (b2 - b1) / dy;
             dz12 = (z2 - z1) / dy;
-            dr12 = ((float) red(rgb2) - red(rgb1)) / dy;
-            dg12 = ((float) green(rgb2) - green(rgb1)) / dy;
-            db12 = ((float) blue(rgb2) - blue(rgb1)) / dy;
         }
         if (y3 != y2) {
-            float dy = y3 - y2;
-            dx23 = (float) (x3 - x2) / dy;
+            int dy = y3 - y2;
+            dx23 = make_fixed_16x16(x3 - x2) / dy;
+            dr23 = (r3 - r2) / dy;
+            dg23 = (g3 - g2) / dy;
+            db23 = (b3 - b2) / dy;
             dz23 = (z3 - z2) / dy;
-            dr23 = ((float) red(rgb3) - red(rgb2)) / dy;
-            dg23 = ((float) green(rgb3) - green(rgb2)) / dy;
-            db23 = ((float) blue(rgb3) - blue(rgb2)) / dy;
         }
-        float _dx13 = dx13;
         float _dz13 = dz13;
-        float _dr13 = dr13;
-        float _dg13 = dg13;
-        float _db13 = db13;
+        int _dx13 = dx13, _dr13 = dr13, _dg13 = dg13, _db13 = db13;
         if (dx13 > dx12) {
-            temp_float = dx13;
+            temp_int = dx13;
             dx13 = dx12;
-            dx12 = temp_float;
+            dx12 = temp_int;
+            temp_int = dr13;
+            dr13 = dr12;
+            dr12 = temp_int;
+            temp_int = dg13;
+            dg13 = dg12;
+            dg12 = temp_int;
+            temp_int = db13;
+            db13 = db12;
+            db12 = temp_int;
             temp_float = dz13;
             dz13 = dz12;
             dz12 = temp_float;
-            temp_float = dr13;
-            dr13 = dr12;
-            dr12 = temp_float;
-            temp_float = dg13;
-            dg13 = dg12;
-            dg12 = temp_float;
-            temp_float = db13;
-            db13 = db12;
-            db12 = temp_float;
         }
         float lz = z1, rz = z1;
-        float wx1 = x1, wx2 = x1;
-        float lr = red(rgb1), lg = green(rgb1), lb = blue(rgb1);
-        float rr = lr, rg = lg, rb = lb;
+        int lx = make_fixed_16x16(x1), rx = lx;
+        int lr = r1, 
+            lg = g1, 
+            lb = b1;
+        int rr = lr, rg = lg, rb = lb;
         for (int y = y1; y < y2; y++) {
-            int lx = round(wx1);
-            int rx = round(wx2);
-            clip(lx, y, rx, y);
-            if (line_x1 != -1) {
-                line_z1 = lz;
-                line_z2 = rz;
-                line_r1 = lr;
-                line_g1 = lg;
-                line_b1 = lb;
-                line_r2 = rr;
-                line_g2 = rg;
-                line_b2 = rb;
-                if (line_x1 != lx) {
-                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
-                    line_r1 = new_val(lr, rr, line_x1 - lx, rx - lx);
-                    line_g1 = new_val(lg, rg, line_x1 - lx, rx - lx);
-                    line_b1 = new_val(lb, rb, line_x1 - lx, rx - lx);
-                }
-                if (line_x2 != rx) {
-                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
-                    line_r2 = new_val(rr, lr, rx - line_x2, rx - lx);
-                    line_g2 = new_val(rg, lg, rx - line_x2, rx - lx);
-                    line_b2 = new_val(rb, lb, rx - line_x2, rx - lx);
-                }
-                hor_line_interpolate_color(y, line_x1, line_z1, line_r1, 
-                                           line_g1, line_b1, line_x2, 
-                                           line_z2, line_r2, line_g2, line_b2);
-            }
-            wx1 += dx13;
-            wx2 += dx12;
+            hor_line_interpolate_color(
+                y, 
+                round_fixed_16x16(lx), lz, lr, lg, lb, 
+                round_fixed_16x16(rx), rz, rr, rg, rb
+            );
+            lx += dx13;
+            rx += dx12;
             lz += dz13;
             rz += dz12;
             lr += dr13;
@@ -354,88 +786,65 @@ public final class Rasterizer3D {
         }
         if (y1 == y2) {
             if (x2 < x1) {
-                wx1 = x2;
-                wx2 = x1;
-                lz = z2;
+                rx = lx;
+                lx = make_fixed_16x16(x2);
                 rz = z1;
+                lz = z2;
                 rr = lr;
-                lr = red(rgb2);
+                lr = r2;
                 rg = lg;
-                lg = green(rgb2);
+                lg = g2;
                 rb = lb;
-                lb = blue(rgb2);
-                temp_float = _dx13;
+                lb = b2;
+                temp_int = _dx13;
                 _dx13 = dx23;
-                dx23 = temp_float;
+                dx23 = temp_int;
+                temp_int = _dr13;
+                _dr13 = dr23;
+                dr23 = temp_int;
+                temp_int = _dg13;
+                _dg13 = dg23;
+                dg23 = temp_int;
+                temp_int = _db13;
+                _db13 = db23;
+                db23 = temp_int;
                 temp_float = _dz13;
                 _dz13 = dz23;
                 dz23 = temp_float;
-                temp_float = _dr13;
-                _dr13 = dr23;
-                dr23 = temp_float;
-                temp_float = _dg13;
-                _dg13 = dg23;
-                dg23 = temp_float;
-                temp_float = _db13;
-                _db13 = db23;
-                db23 = temp_float;
             } else {
-                wx2 = x2;
+                rx = make_fixed_16x16(x2);
                 rz = z2;
-                rr = red(rgb2);
-                rg = green(rgb2);
-                rb = blue(rgb2);
+                rr = r2;
+                rg = g2;
+                rb = b2;
             }
         } else {
             if (_dx13 < dx23) {
-                temp_float = _dx13;
+                temp_int = _dx13;
                 _dx13 = dx23;
-                dx23 = temp_float;
+                dx23 = temp_int;
+                temp_int = _dr13;
+                _dr13 = dr23;
+                dr23 = temp_int;
+                temp_int = _dg13;
+                _dg13 = dg23;
+                dg23 = temp_int;
+                temp_int = _db13;
+                _db13 = db23;
+                db23 = temp_int;
                 temp_float = _dz13;
                 _dz13 = dz23;
                 dz23 = temp_float;
-                temp_float = _dr13;
-                _dr13 = dr23;
-                dr23 = temp_float;
-                temp_float = _dg13;
-                _dg13 = dg23;
-                dg23 = temp_float;
-                temp_float = _db13;
-                _db13 = db23;
-                db23 = temp_float;
             }
         }
         for (int y = y2; y <= y3; y++) {
-            int lx = round(wx1);
-            int rx = round(wx2);
-            clip(lx, y, rx, y);
-            if (line_x1 != -1) {
-                line_z1 = lz;
-                line_z2 = rz;
-                line_r1 = lr;
-                line_g1 = lg;
-                line_b1 = lb;
-                line_r2 = rr;
-                line_g2 = rg;
-                line_b2 = rb;
-                if (line_x1 != lx) {
-                    line_z1 = new_val(lz, rz, line_x1 - lx, rx - lx);
-                    line_r1 = new_val(lr, rr, line_x1 - lx, rx - lx);
-                    line_g1 = new_val(lg, rg, line_x1 - lx, rx - lx);
-                    line_b1 = new_val(lb, rb, line_x1 - lx, rx - lx);
-                }
-                if (line_x2 != rx) {
-                    line_z2 = new_val(rz, lz, rx - line_x2, rx - lx);
-                    line_r2 = new_val(rr, lr, rx - line_x2, rx - lx);
-                    line_g2 = new_val(rg, lg, rx - line_x2, rx - lx);
-                    line_b2 = new_val(rb, lb, rx - line_x2, rx - lx);
-                }
-                hor_line_interpolate_color(y, line_x1, line_z1, line_r1, 
-                                           line_g1, line_b1, line_x2, 
-                                           line_z2, line_r2, line_g2, line_b2);
-            }
-            wx1 += _dx13;
-            wx2 += dx23;
+            hor_line_interpolate_color(
+                y, 
+                round_fixed_16x16(lx), lz, lr, lg, lb, 
+                round_fixed_16x16(rx), rz, rr, rg, rb
+            );
+            lx += _dx13;
+            rx += dx23;
             lz += _dz13;
             rz += dz23;
             lr += _dr13;
@@ -447,18 +856,21 @@ public final class Rasterizer3D {
         }
     }
     
-    private void hor_line_interpolate_color(int y, int x1, float z1, float r1, float g1, float b1, int x2, float z2, float r2, float g2, float b2) {
+//  color values are fixed point numbers (8x24)
+    private void hor_line_interpolate_color(int y, int x1, float z1, int r1, int g1, int b1, int x2, float z2, int r2, int g2, int b2) {
         int i = index(x1, y);
         float z = z1;
-        float dx = max(1, x2 - x1);
+        int dx = max(1, x2 - x1);
         final float dz = (z2 - z1) / dx;
-        final float dr = (r2 - r1) / dx;
-        final float dg = (g2 - g1) / dx;
-        final float db = (b2 - b1) / dx;
-        float r = r1, g = g1, b = b1;
+        final int dr = (r2 - r1) / dx;
+        final int dg = (g2 - g1) / dx;
+        final int db = (b2 - b1) / dx;
+        int r = r1, g = g1, b = b1;
         for (int x = x1;;) {
             if (z_buff[i] > z) {
-                this.g.plot(x, y, rgb(roundPositive(r), roundPositive(g), roundPositive(b)));
+                this.g.plot(
+                    x, y, 
+                    rgb(round_fixed_8x24(r), round_fixed_8x24(g), round_fixed_8x24(b)));
                 z_buff[i] = z;
             }
             if (++x > x2)
@@ -492,10 +904,6 @@ public final class Rasterizer3D {
     
     private float new_val(int old_x, int old_y, int clipped_x, int clipped_y, float v1, float v2, float old_len) {
         return v1 + (v2 - v1) * dist(old_x, old_y, clipped_x, clipped_y) / old_len;
-    }
-    
-    private float new_val(float v1, float v2, float new_len, float old_len) {
-        return v1 + (v2 - v1) * new_len / old_len;
     }
     
     private void bresenham(int x1, int y1, float z1, int x2, int y2, float z2) {
@@ -657,27 +1065,31 @@ public final class Rasterizer3D {
     }
     
     private void clip(int x1, int y1, int x2, int y2) {
-        code_1 = code(x1, y1);
-        code_2 = code(x2, y2);
+        temp_code1 = code(x1, y1);
+        temp_code2 = code(x2, y2);
+        clip0(x1, y1, x2, y2);
+    }
+    
+    private void clip0(int x1, int y1, int x2, int y2) {
         for (;;) {
-            if ((code_1 | code_2) == 0) {
+            if ((temp_code1 | temp_code2) == 0) {
                 line_x1 = x1;
                 line_x2 = x2;
                 line_y1 = y1;
                 line_y2 = y2;
                 break;
             } else {
-                if ((code_1 & code_2) == 0) {
-                    if (code_1 != 0) {
-                        transfer(x1, y1, x2, y2, code_1);
+                if ((temp_code1 & temp_code2) == 0) {
+                    if (temp_code1 != 0) {
+                        transfer(x1, y1, x2, y2, temp_code1);
                         x1 = temp_x;
                         y1 = temp_y;
-                        code_1 = code(x1, y1);
+                        temp_code1 = code(x1, y1);
                     } else { // code_2 != 0
-                        transfer(x2, y2, x1, y1, code_2);
+                        transfer(x2, y2, x1, y1, temp_code2);
                         x2 = temp_x;
                         y2 = temp_y;
-                        code_2 = code(x2, y2);
+                        temp_code2 = code(x2, y2);
                     }
                 } else {
                     line_x1 = -1; // line is outside the screen
@@ -753,6 +1165,33 @@ public final class Rasterizer3D {
     
     private int index(int x, int y) {
         return x + y * w;
+    }
+    
+    private static class TriPoint {
+        
+        float z;
+        int x, y;
+        
+        int rgb;
+        float r, g, b;
+        
+        double angle;
+        boolean angle_calc;
+        
+        boolean eq(TriPoint p) {
+            return x == p.x && y == p.y;
+        }
+        
+        double angle_rel_to(TriPoint p) {
+            if (angle_calc)
+                return angle;
+            float px = x - p.x;
+            float py = y - p.y;
+            angle = Math.atan2(-py, px);
+            angle_calc = true;
+            return angle;
+        }
+        
     }
     
 }

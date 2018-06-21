@@ -94,7 +94,7 @@ public interface Vector3f {
             return this.x * x + this.y * y + this.z * z;
         }
         
-        vec3 normalize(float len2) {
+        vec3 normalize_len2_known(float len2) {
             float len_inv = (float) (1.0 / Math.sqrt(len2));
             x *= len_inv;
             y *= len_inv;
@@ -102,7 +102,7 @@ public interface Vector3f {
             return this;
         }
         
-        vec3 _normalize(float len) {
+        vec3 normalize_len_known(float len) {
             float len_inv = 1f / len;
             x *= len_inv;
             y *= len_inv;
@@ -111,7 +111,7 @@ public interface Vector3f {
         }
         
         vec3 normalize() {
-            return normalize(len2());
+            return normalize_len2_known(len2());
         }
         
         // axis is always unit vector
@@ -162,7 +162,7 @@ public interface Vector3f {
             );
         }
         
-        vec3 project(mat4 prjMat) {
+        vec3 prj(mat4 prjMat) {
             float w_inv = -1f / z;
             return set(
                 x * prjMat.values[M00] * w_inv, 

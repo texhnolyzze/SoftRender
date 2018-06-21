@@ -10,10 +10,10 @@ public interface Vertex {
     Vector3f norm();
     
     boolean lighted();
-    void markAsLighted();
-    void markAsNotLighted();
     
-    void setTempRGB(int rgb);
-    int getTempRGB();
+    float getTempRed();
+    float getTempGreen();
+    float getTempBlue();
+    void setTempRGB(float r, float g, float b);
     
 }

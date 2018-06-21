@@ -28,7 +28,12 @@ public class Renderer {
     private int curr_face_idx;
     private Face[] temp_faces = new Face[1024];
     
-    private vec3 temp_vec1 = new vec3(), temp_vec2 = new vec3(), temp_vec3 = new vec3();
+    private vec3 
+            temp_vec1 = new vec3(), 
+            temp_vec2 = new vec3(), 
+            rgb_vec = new vec3(),
+            norm_vec = new vec3(),
+            point_vec = new vec3();
     
     private Camera curr_camera;
     
@@ -40,9 +45,9 @@ public class Renderer {
         return rasterizer;
     }
     
-    public void addAmbientLight(AmbientLight light) {ambLights.add(light);}
-    public void addDirectionLight(DirectionLight light) {dirLights.add(light);}
-    public void addPointLight(PointLight light) {pointLights.add(light);}
+    public List<AmbientLight> getAmbientLights() {return ambLights;}
+    public List<DirectionLight> getDirectionLights() {return dirLights;}
+    public List<PointLight> getPointLights() {return pointLights;}
     
     public void render(Camera c, ModelInstance instance, final ShadeMode shadeMode) {
         curr_camera = c;
@@ -75,12 +80,22 @@ public class Renderer {
                 for (int i = 0; i < curr_face_idx; i++) 
                     lightFace(temp_faces[i], mat);
                 break;
+            case GOURAUD:
+                for (int i = 0; i < curr_face_idx; i++) {
+                    Face f = temp_faces[i];
+                    Vertex v0 = f.v0(), v1 = f.v1(), v2 = f.v2();
+                    if (!v0.lighted()) lightVertex(v0, mat);
+                    if (!v1.lighted()) lightVertex(v1, mat);
+                    if (!v2.lighted()) lightVertex(v2, mat);
+                }
+                break;
         }
         c.toViewSpace(m.vertices());
         c.project(m.vertices(), rasterizer.getGraphics().getWidth(), rasterizer.getGraphics().getHeight());
         switch (shadeMode) {
             case WIREFRAME:
                 int rgb = rgb(mat.ar, mat.ag, mat.ab); // use material ambient color
+                rasterizer.getGraphics().setColor(rgb);
                 for (int i = 0; i < curr_face_idx; i++) {
                     Face f = temp_faces[i];
                     Vector3f v0 = f.v0().pos();
@@ -89,104 +104,121 @@ public class Renderer {
                     rasterizer.strokeTriangle(
                         round(v0.x()), round(v0.y()), v0.z(), 
                         round(v1.x()), round(v1.y()), v1.z(), 
-                        round(v2.x()), round(v2.y()), v2.z(), 
-                        rgb
+                        round(v2.x()), round(v2.y()), v2.z()
                     );
                 }
                 break;
             case FLAT:
                 for (int i = 0; i < curr_face_idx; i++) {
                     Face f = temp_faces[i];
+                    rasterizer.getGraphics().setColor(rgb(f.getTempRed(), f.getTempGreen(), f.getTempBlue()));
                     rasterizer.fillTriangle(
                         round(f.v0().pos().x()), round(f.v0().pos().y()), f.v0().pos().z(), 
                         round(f.v1().pos().x()), round(f.v1().pos().y()), f.v1().pos().z(), 
-                        round(f.v2().pos().x()), round(f.v2().pos().y()), f.v2().pos().z(), 
-                        f.getTempRGB()
+                        round(f.v2().pos().x()), round(f.v2().pos().y()), f.v2().pos().z()
                     );
                 }
                 break;
             case GOURAUD:
-                // not ready yet
+                for (int i = 0; i < curr_face_idx; i++) {
+                    Face f = temp_faces[i];
+                    rasterizer.fillTriangleInterpolateColors(
+                        round(f.v0().pos().x()), round(f.v0().pos().y()), f.v0().pos().z(), f.v0().getTempRed(), f.v0().getTempGreen(), f.v0().getTempBlue(), 
+                        round(f.v1().pos().x()), round(f.v1().pos().y()), f.v1().pos().z(), f.v1().getTempRed(), f.v1().getTempGreen(), f.v1().getTempBlue(),
+                        round(f.v2().pos().x()), round(f.v2().pos().y()), f.v2().pos().z(), f.v2().getTempRed(), f.v2().getTempGreen(), f.v2().getTempBlue() 
+                    );
+                }
                 break;
         }
         m.reset();
         curr_face_idx = 0;
     }
     
-    // the face is lighting in the world space
+//  the face is lighting in the world space
     private void lightFace(Face f, final Material m) {
-        float nx = f.norm().x();
-        float ny = f.norm().y();
-        float nz = f.norm().z();
-        float r = 0f, g = 0f, b = 0f;
-        f.getMediPoint(temp_vec1);
-        vec3 medi_point = temp_vec1; // the point at which lighting will be calculated
-        curr_camera.pos.sub(medi_point, temp_vec2).normalize();
-        vec3 view_dir = temp_vec2; // vector directed at the observer
+        norm_vec.set(f.norm());
+        f.getMediPoint(point_vec);
+        light(rgb_vec, point_vec, norm_vec, curr_camera.pos, m);
+        f.setTempRGB(rgb_vec.x, rgb_vec.y, rgb_vec.z);
+    }
+    
+    private void lightVertex(Vertex v, Material m) {
+        norm_vec.set(v.norm());
+        point_vec.set(v.pos());
+        light(rgb_vec, point_vec, norm_vec, curr_camera.pos, m);
+        v.setTempRGB(rgb_vec.x, rgb_vec.y, rgb_vec.z);
+    }
+    
+    private void light(vec3 rgb, vec3 point, vec3 norm, vec3 view_pos, Material m) {
+        rgb.set(0f, 0f, 0f);
+        view_pos.sub(point, temp_vec1).normalize();
+        vec3 view_dir = temp_vec1; // vector directed at the observer
         for (AmbientLight l : ambLights) {
             if (!l.enabled) 
                 continue;
-            r += m.ar * l.ar;
-            g += m.ag * l.ag;
-            b += m.ab * l.ab;
+            rgb.x += m.ar * l.ar;
+            rgb.y += m.ag * l.ag;
+            rgb.z += m.ab * l.ab;
         }
         for (DirectionLight l : dirLights) {
             if (!l.enabled)
                 continue;
-            r += m.ar * l.ar;
-            g += m.ag * l.ag;
-            b += m.ab * l.ab;
-            float dp = l.dir_inv.dot(nx, ny, nz);
+            rgb.x += m.ar * l.ar;
+            rgb.y += m.ag * l.ag;
+            rgb.z += m.ab * l.ab;
+            float dp = l.dir_inv.dot(norm);
             if (dp > 0f) {
-                r += dp * m.dr * l.dr;
-                g += dp * m.dg * l.dg;
-                b += dp * m.db * l.db;
+                rgb.x += dp * m.dr * l.dr;
+                rgb.y += dp * m.dg * l.dg;
+                rgb.z += dp * m.db * l.db;
             }
 //          note that, for example, for a cube whose side is 
 //          represented by two triangles, the specular lighting 
 //          component may be look ridiculous, because one of the triangles 
 //          will have a color different from the other
-            l.dir_inv.reflect(nx, ny, nz, temp_vec3);
-            vec3 light_dir_reflected = temp_vec3; 
+            l.dir_inv.reflect(norm, temp_vec2);
+            vec3 light_dir_reflected = temp_vec2; 
             dp = light_dir_reflected.dot(view_dir);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, m.shininess);
-                r += pow * m.sr * l.sr;
-                g += pow * m.sg * l.sg;
-                b += pow * m.sb * l.sb;
+                rgb.x += pow * m.sr * l.sr;
+                rgb.y += pow * m.sg * l.sg;
+                rgb.z += pow * m.sb * l.sb;
             }
         }
         for (PointLight l : pointLights) {
             if (!l.enabled)
                 continue;
-            temp_vec3.set(l.pos).sub(medi_point, temp_vec3);
-            vec3 light_dir = temp_vec3; // vector directed at the point light source
+            temp_vec2.set(l.pos).sub(point, temp_vec2);
+            vec3 light_dir = temp_vec2; // vector directed at the point light source
             float d_sqr = light_dir.len2(), d = (float) Math.sqrt(d_sqr);
             float attenuation = 1f / (l.kc + l.kl * d + l.kq * d_sqr);
-            r += attenuation * m.ar * l.ar;
-            g += attenuation * m.ag * l.ag;
-            b += attenuation * m.ab * l.ab;
-            light_dir.normalize(d);
-            float dp = light_dir.dot(nx, ny, nz);
+            if (attenuation < 0.0001f)
+                continue;
+            rgb.x += attenuation * m.ar * l.ar;
+            rgb.y += attenuation * m.ag * l.ag;
+            rgb.z += attenuation * m.ab * l.ab;
+            light_dir.normalize_len_known(d);
+            float dp = light_dir.dot(norm);
             if (dp > 0f) {
-                r += attenuation * dp * m.dr * l.dr;
-                g += attenuation * dp * m.dg * l.dg;
-                b += attenuation * dp * m.db * l.db;
+                rgb.x += attenuation * dp * m.dr * l.dr;
+                rgb.y += attenuation * dp * m.dg * l.dg;
+                rgb.z += attenuation * dp * m.db * l.db;
             }
-            light_dir.reflect(nx, ny, nz, light_dir); 
+            light_dir.reflect(norm, light_dir); 
             dp = light_dir.dot(view_dir);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, m.shininess);
-                r += attenuation * pow * m.sr * l.sr;
-                g += attenuation * pow * m.sg * l.sg;
-                b += attenuation * pow * m.sb * l.sb;
+                rgb.x += attenuation * pow * m.sr * l.sr;
+                rgb.y += attenuation * pow * m.sg * l.sg;
+                rgb.z += attenuation * pow * m.sb * l.sb;
             }
         }
-        f.setTempRGB(rgb(r > 1f ? 1f : r, g > 1f ? 1f : g, b > 1f ? 1f : b));
+        rgb.set(rgb.x > 1f ? 1f: rgb.x, rgb.y > 1f ? 1f: rgb.y, rgb.z > 1f ? 1f: rgb.z);
     }
     
-    private void lightVertex(Vertex v, final Material m) {
-        // not ready yet
+    private static int toRGB(vec3 rgb) {
+        return rgb(rgb.x, rgb.y, rgb.z);
     }
     
 }

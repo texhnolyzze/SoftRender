@@ -86,4 +86,32 @@ public final class MathUtils {
         return Math.max(start1, start2) < Math.min(end1, end2);
     }
     
+//  Static methods of this class are used in inner cycles of the Rasterizer3D class. 
+//  The arguments in the methods below are all greater or equal to 0.
+//  Note that (fixed (+/-) fixed = fixed), (fixed * int = fixed), (fixed / int = fixed)
+    static class Fixed {
+        
+        static int make_fixed_8x24(int val) {
+            return val << 24;
+        }
+        
+        static int make_fixed_8x24(float val) {
+            return (int) (val * 16777216.0f + 0.5f);
+        }
+        
+        static int make_fixed_16x16(int val) {
+            return val << 16;
+        }
+        
+//      rounds fixed value to the nearest integer value.
+        static int round_fixed_8x24(int fixed) {
+            return (fixed + (1 << 23)) >>> 24;
+        }
+        
+        static int round_fixed_16x16(int fixed) {
+            return (fixed + (1 << 15)) >>> 16;
+        }
+        
+    }
+    
 }

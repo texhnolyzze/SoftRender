@@ -14,8 +14,10 @@ public interface Face {
     
     boolean isTwoFaced();
     
-    int getTempRGB();
-    void setTempRGB(int rgb);
+    float getTempRed();
+    float getTempGreen();
+    float getTempBlue();
+    void setTempRGB(float r, float g, float b);
     
     default Vector3f getMediPoint(Vector3f dest) {
         return dest.set(

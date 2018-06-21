@@ -75,7 +75,7 @@ public class Camera {
         temp_vec1.set(x, y, z).sub(pos, temp_vec1);
         float len2 = temp_vec1.len2();
         if (len2 != 0.0f) {
-            temp_vec1.normalize(len2);
+            temp_vec1.normalize_len2_known(len2);
             float dp = temp_vec1.dot(up);
             if (Math.abs(dp - 1f) < 0.001f) 
                 up.set(-dir.x, -dir.y, -dir.z);
@@ -290,8 +290,8 @@ public class Camera {
             
             bounding_pos000.set(min_x, min_y, min_z);
             bounding_pos111.set(max_x, max_y, max_z);
-            bounding_pos000.project(projectionMatrix);
-            bounding_pos111.project(projectionMatrix);
+            bounding_pos000.prj(projectionMatrix);
+            bounding_pos111.prj(projectionMatrix);
             
             return MathUtils.cubesIntersects(
                 -1f, -1f, -1f, 1f, 1f, 1f, 

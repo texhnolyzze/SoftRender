@@ -1,6 +1,7 @@
 package render;
 
 import java.awt.image.BufferedImage;
+import static render.MathUtils.roundPositive;
 
 /**
  *
@@ -30,7 +31,7 @@ public interface Graphics {
     }
     
     public static int rgb(float r, float g, float b) {
-        return rgb((int) (r * 255f), (int) (g * 255f), (int) (b * 255f));
+        return rgb(roundPositive(255f * r), roundPositive(255f * g), roundPositive(255f * b));
     }
     
     public static int red(int rgb) {

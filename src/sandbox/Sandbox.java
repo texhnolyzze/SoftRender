@@ -32,39 +32,38 @@ public class Sandbox {
         DefaultGraphics g = new DefaultGraphics(1024, 768);
         Renderer r = new Renderer(g);
         Rasterizer3D rast = r.getRasterizer();
-        Camera c = new Camera(10f, 1000f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, 60, 75);
+//        rast.getGraphics().setColor(Graphics.WHITE);
+//        rast.fillTriangle(500, -100, 0, 300, 300, 0, -300, 350, 0);
+        Camera c = new Camera(10f, 100f, 45, g.getWidth(), g.getHeight());
+        c.setPosition(0f, 0, 30);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(0);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(-100));
+        c.moveInDirection(-43);
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
+        c.rotateDirectionAround(0, 1, 0, (float) Math.toRadians(24));
         c.updateViewMatrix();
         M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
         MI instance = new MI();
         instance.m = m;
-        r.addAmbientLight(new AmbientLight(0.3f, 0.3f, 0.3f));
-        r.addDirectionLight(new DirectionLight(
+        r.getAmbientLights().add(new AmbientLight(0.3f, 0.3f, 0.3f));
+        r.getDirectionLights().add(new DirectionLight(
             0.3f, 0.3f, 0.3f,
             0.3f, 0.3f, 0.3f, 
             0.6f, 0.6f, 0.6f, 
             -1f, -1f, -1f)
         );
-        r.addPointLight(new PointLight(
+        r.getPointLights().add(new PointLight(
             0.5f, 0.5f, 0.5f,
             0.3f, 0.4f, 0.4f,
             0.4f, 0.5f, 0.1f,
             0f, 0f, 1f,
             1f, 0.5f, 0.1f
         ));
+//        r.render(c, instance, ShadeMode.GOURAUD);
         long t = System.nanoTime();
-        r.render(c, instance, ShadeMode.FLAT);
+        r.render(c, instance, ShadeMode.GOURAUD);
         System.out.println(System.nanoTime() - t);
         ImageIO.write(g.getAsImage(), "jpg", new File("./src/sandbox/out/1.jpg"));
     }
-    
-    static float angle = (float) Math.toRadians(0);
-    static float ca = (float) Math.cos(angle);
-    static float sa = (float) Math.sin(angle);
-    static float temp_x, temp_z;
     
     static M fromOBJ(File OBJFile) throws IOException {
         List<Vec> normals = new ArrayList<>();
@@ -78,20 +77,12 @@ public class Sandbox {
                 v.pos.x = Float.parseFloat(split[1]);
                 v.pos.y = Float.parseFloat(split[2]);
                 v.pos.z = Float.parseFloat(split[3]);
-                temp_x = v.pos.x * ca - v.pos.z * sa;
-                temp_z = v.pos.x * sa + v.pos.z * ca;
-                v.pos.x = temp_x;
-                v.pos.z = temp_z;
                 m.vertices.add(v);
             } else if (split[0].equals("vn")) {
                 Vec n = new Vec();
                 n.x = Float.parseFloat(split[1]);
                 n.y = Float.parseFloat(split[2]);
                 n.z = Float.parseFloat(split[3]);
-                temp_x = n.x * ca - n.z * sa;
-                temp_z = n.x * sa + n.z * ca;
-                n.x = temp_x;
-                n.z = temp_z;
                 normals.add(n);
             } else if (split[0].equals("f")) {
                 F f = new F();
@@ -101,6 +92,9 @@ public class Sandbox {
                 f.v0 = (V) m.vertices.get(Integer.parseInt(v0[0]) - 1);
                 f.v1 = (V) m.vertices.get(Integer.parseInt(v1[0]) - 1);
                 f.v2 = (V) m.vertices.get(Integer.parseInt(v2[0]) - 1);
+                f.v0.norm = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
+                f.v1.norm = (Vec) normals.get(Integer.parseInt(v1[2]) - 1);
+                f.v2.norm = (Vec) normals.get(Integer.parseInt(v2[2]) - 1);                
                 f.n = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
                 m.faces.add(f);
             }
@@ -111,7 +105,8 @@ public class Sandbox {
     static class V implements Vertex {
 
         Vec pos;
-        int rgb;
+        Vec norm;
+        float r = -1f, g, b;
         
         @Override
         public Vector3f pos() {
@@ -120,32 +115,34 @@ public class Sandbox {
 
         @Override
         public Vector3f norm() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return norm;
         }
-
-        @Override
-        public void markAsLighted() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public void markAsNotLighted() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
+        
         @Override
         public boolean lighted() {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+            return r != -1f;
         }
 
         @Override
-        public void setTempRGB(int rgb) {
-            this.rgb = rgb;
+        public void setTempRGB(float r, float g, float b) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
         }
 
         @Override
-        public int getTempRGB() {
-            return rgb;
+        public float getTempRed() {
+            return r;
+        }
+        
+        @Override
+        public float getTempGreen() {
+            return g;
+        }
+        
+        @Override
+        public float getTempBlue() {
+            return b;
         }
         
     }
@@ -185,7 +182,7 @@ public class Sandbox {
         V v0, v1, v2;
         Vec n;
         
-        int rgb;
+        float r, g, b;
         
         @Override
         public Vector3f norm() {
@@ -213,15 +210,26 @@ public class Sandbox {
         }
 
         @Override
-        public void setTempRGB(int rgb) {
-            this.rgb = rgb;
+        public void setTempRGB(float r, float g, float b) {
+            this.r = r;
+            this.g = g;
+            this.b = b;
         }
         
         @Override
-        public int getTempRGB() {
-            return rgb;
+        public float getTempRed() {
+            return r;
         }
             
+        @Override
+        public float getTempGreen() {
+            return g;
+        }
+        
+        @Override
+        public float getTempBlue() {
+            return b;
+        }
         
     }
     
@@ -255,6 +263,8 @@ public class Sandbox {
 
         List<Face> faces = new ArrayList<>();
         List<Vertex> vertices = new ArrayList<>();
+        
+        
         
         @Override
         public int numFaces() {
