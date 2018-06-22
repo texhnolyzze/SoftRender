@@ -237,10 +237,9 @@ public final class Rasterizer3D {
             tri_points[0].y = line_y1;
             tri_points[1].x = line_x2;
             tri_points[1].y = line_y2;
-            
             if (line_x1 != x1 || line_y1 != y1) { // need to recalculate depth and color
-                dist_inv = 1f / MathUtils.dist(x1, y1, x2, y2);
-                float coeff = dist_inv * MathUtils.dist(x1, y1, line_x1, line_y1);
+                dist_inv = 1f / dist(x1, y1, x2, y2);
+                float coeff = dist_inv * dist(x1, y1, line_x1, line_y1);
                 tri_points[0].z = z1 + (z2 - z1) * coeff;
                 if (interpolate_colors) {
                     tri_points[0].r = r1 + (r2 - r1) * coeff;
@@ -255,13 +254,12 @@ public final class Rasterizer3D {
                     tri_points[0].b = b1;
                 }
             }
-            
             if (line_x2 != x2 || line_y2 != y2) {
                 float coeff;
                 if (dist_inv == -1f)
-                    coeff = MathUtils.dist(x2, y2, line_x2, line_y2) / MathUtils.dist(x1, y1, x2, y2);
+                    coeff = dist(x2, y2, line_x2, line_y2) / dist(x1, y1, x2, y2);
                 else
-                    coeff = dist_inv * MathUtils.dist(x2, y2, line_x2, line_y2);
+                    coeff = dist_inv * dist(x2, y2, line_x2, line_y2);
                 tri_points[1].z = z2 + (z1 - z2) * coeff;
                 if (interpolate_colors) {
                     tri_points[1].r = r2 + (r1 - r2) * coeff;
@@ -294,8 +292,8 @@ public final class Rasterizer3D {
                 tri_points[1].y = line_y2;
                 
                 if (line_x1 != x2 || line_y1 != y2) { 
-                    dist_inv = 1f / MathUtils.dist(x2, y2, x3, y3);
-                    float coeff = dist_inv * MathUtils.dist(x2, y2, line_x1, line_y1);
+                    dist_inv = 1f / dist(x2, y2, x3, y3);
+                    float coeff = dist_inv * dist(x2, y2, line_x1, line_y1);
                     tri_points[0].z = z2 + (z3 - z2) * coeff;
                     if (interpolate_colors) {
                         tri_points[0].r = r2 + (r3 - r2) * coeff;
@@ -314,9 +312,9 @@ public final class Rasterizer3D {
                 if (line_x2 != x3 || line_y2 != y3) {
                     float coeff;
                     if (dist_inv == -1f)
-                        coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                        coeff = dist(x3, y3, line_x2, line_y2) / dist(x2, y2, x3, y3);
                     else
-                        coeff = dist_inv * MathUtils.dist(x3, y3, line_x2, line_y2);
+                        coeff = dist_inv * dist(x3, y3, line_x2, line_y2);
                     tri_points[1].z = z3 + (z2 - z3) * coeff;
                     if (interpolate_colors) {
                         tri_points[1].r = r3 + (r2 - r3) * coeff;
@@ -341,12 +339,19 @@ public final class Rasterizer3D {
                     tri_points[2].y = line_y2;
                     
                     if (line_x2 != x3 || line_y2 != y3) {
-                        float coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                        float coeff = dist(x3, y3, line_x2, line_y2) / dist(x2, y2, x3, y3);
                         tri_points[2].z = z3 + (z2 - z3) * coeff;
                         if (interpolate_colors) {
                             tri_points[2].r = r3 + (r2 - r3) * coeff;
                             tri_points[2].g = g3 + (g2 - g3) * coeff;
                             tri_points[2].b = b3 + (b2 - b3) * coeff;
+                        }
+                    } else {
+                        tri_points[2].z = z3;
+                        if (interpolate_colors) {
+                            tri_points[2].r = r3;
+                            tri_points[2].g = g3;
+                            tri_points[2].b = b3;
                         }
                     }
                     
@@ -360,10 +365,9 @@ public final class Rasterizer3D {
                     tri_points[3].y = line_y2;
                     
                     float dist_inv = -1f;
-                    
                     if (line_x1 != x2 || line_y1 != y2) { 
-                        dist_inv = 1f / MathUtils.dist(x2, y2, x3, y3);
-                        float coeff = dist_inv * MathUtils.dist(x2, y2, line_x1, line_y1);
+                        dist_inv = 1f / dist(x2, y2, x3, y3);
+                        float coeff = dist_inv * dist(x2, y2, line_x1, line_y1);
                         tri_points[2].z = z2 + (z3 - z2) * coeff;
                         if (interpolate_colors) {
                             tri_points[2].r = r2 + (r3 - r2) * coeff;
@@ -383,9 +387,9 @@ public final class Rasterizer3D {
                     
                         float coeff;
                         if (dist_inv == -1f)
-                            coeff = MathUtils.dist(x3, y3, line_x2, line_y2) / MathUtils.dist(x2, y2, x3, y3);
+                            coeff = dist(x3, y3, line_x2, line_y2) / dist(x2, y2, x3, y3);
                         else
-                            coeff = dist_inv * MathUtils.dist(x3, y3, line_x2, line_y2);
+                            coeff = dist_inv * dist(x3, y3, line_x2, line_y2);
                         tri_points[3].z = z3 + (z2 - z3) * coeff;
                         if (interpolate_colors) {
                             tri_points[3].r = r3 + (r2 - r3) * coeff;
@@ -422,8 +426,8 @@ public final class Rasterizer3D {
                 tri_points[1].y = line_y2;
                 
                 if (line_x1 != x3 || line_y1 != y3) { 
-                    dist_inv = 1f / MathUtils.dist(x3, y3, x1, y1);
-                    float coeff = dist_inv * MathUtils.dist(x3, y3, line_x1, line_y1);
+                    dist_inv = 1f / dist(x3, y3, x1, y1);
+                    float coeff = dist_inv * dist(x3, y3, line_x1, line_y1);
                     tri_points[0].z = z3 + (z1 - z3) * coeff;
                     if (interpolate_colors) {
                         tri_points[0].r = r3 + (r1 - r3) * coeff;
@@ -442,9 +446,9 @@ public final class Rasterizer3D {
                 if (line_x2 != x1 || line_y2 != y1) {
                     float coeff;
                     if (dist_inv == -1f)
-                        coeff = MathUtils.dist(x1, y1, line_x2, line_y2) / MathUtils.dist(x3, y3, x1, y1);
+                        coeff = dist(x1, y1, line_x2, line_y2) / dist(x3, y3, x1, y1);
                     else
-                        coeff = dist_inv * MathUtils.dist(x1, y1, line_x2, line_y2);
+                        coeff = dist_inv * dist(x1, y1, line_x2, line_y2);
                     tri_points[1].z = z1 + (z3 - z1) * coeff;
                     if (interpolate_colors) {
                         tri_points[1].r = r1 + (r3 - r1) * coeff;
@@ -466,8 +470,8 @@ public final class Rasterizer3D {
                 float dist_inv = -1f;
                 if (tri_points[n - 1].x != line_x1 || tri_points[n - 1].y != line_y1) {
 
-                    dist_inv = 1f / MathUtils.dist(x3, y3, x1, y1);
-                    float coeff = dist_inv * MathUtils.dist(x3, y3, line_x1, line_y1);
+                    dist_inv = 1f / dist(x3, y3, x1, y1);
+                    float coeff = dist_inv * dist(x3, y3, line_x1, line_y1);
                     tri_points[n].x = line_x1;
                     tri_points[n].y = line_y1;
                     tri_points[n].z = z3 + (z1 - z3) * coeff;
@@ -479,11 +483,12 @@ public final class Rasterizer3D {
                     n++;
                 } 
                 if (tri_points[0].x != line_x2 || tri_points[0].y != line_y2) {
+                    
                     float coeff;
                     if (dist_inv == -1f)
-                        coeff = MathUtils.dist(x1, y1, line_x2, line_y2) / MathUtils.dist(x3, y3, x1, y1);
+                        coeff = dist(x1, y1, line_x2, line_y2) / dist(x3, y3, x1, y1);
                     else
-                        coeff = dist_inv * MathUtils.dist(x1, y1, line_x2, line_y2);
+                        coeff = dist_inv * dist(x1, y1, line_x2, line_y2);
                     tri_points[n].x = line_x2;
                     tri_points[n].y = line_y2;
                     tri_points[n].z = z1 + (z3 - z1) * coeff;
@@ -491,6 +496,7 @@ public final class Rasterizer3D {
                         tri_points[n].r = r1 + (r3 - r1) * coeff;
                         tri_points[n].g = g1 + (g3 - g1) * coeff;
                         tri_points[n].b = b1 + (b3 - b1) * coeff;
+                        
                     }
                     n++;
                 }
@@ -502,12 +508,12 @@ public final class Rasterizer3D {
         v1v2_y = y2 - y1;
         v1v3_x = x3 - x1;
         v1v3_y = y3 - y1;
-        temp_det = v1v2_x * v1v3_y - v1v2_y * v1v3_x;
+        temp_det_inv = 1f / (v1v2_x * v1v3_y - v1v2_y * v1v3_x);
 
         if (test_point(-x1, -y1)) { // point (0, 0) belongs to triangle
             tri_points[n].x = 0;
             tri_points[n].y = 0;
-            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2);
+            tri_points[n].z = (z1 + (z2 - z1) * temp_k1) + (z1 + (z3 - z1) * temp_k2); //I'm not sure this is right
             if (interpolate_colors) {
                 tri_points[n].r = (r1 + (r2 - r1) * temp_k1) + (r1 + (r3 - r1) * temp_k2);
                 tri_points[n].g = (g1 + (g2 - g1) * temp_k1) + (g1 + (g3 - g1) * temp_k2);
@@ -553,6 +559,9 @@ public final class Rasterizer3D {
             n++;
         }
         
+        if (n < 3) //triangle is not visible
+            return;
+        
         if (max_y_index == -1) {
             max_y_index = 0;
             for (int i = 1; i < n; i++) {
@@ -567,27 +576,24 @@ public final class Rasterizer3D {
         tri_points[max_y_index] = temp;
         
         final TriPoint max_y = tri_points[0];
-        try {
         Arrays.sort(tri_points, 1, n, (TriPoint p1, TriPoint p2) -> {
             return Double.compare(p1.angle_rel_to(max_y), p2.angle_rel_to(max_y));
         });
-        } catch (Exception ex) {
-        }
         
         for (int i = 0; i < n; i++) tri_points[i].angle_calc = false;
         
     }
     
-    private float temp_det;
+    private float temp_det_inv;
     private float temp_k1, temp_k2; 
     private float v1v2_x, v1v2_y, v1v3_x, v1v3_y;
 
     private boolean test_point(float px, float py) { 
         float det1 = v1v2_x * py - v1v2_y * px;
-        temp_k1 = det1 / temp_det;
+        temp_k1 = det1 * temp_det_inv;
         if (temp_k1 >= 0f && temp_k1 <= 1f) {
             float det2 = v1v3_y * px - v1v3_x * py;
-            temp_k2 = det2 / temp_det;
+            temp_k2 = det2 * temp_det_inv;
             if (temp_k2 >= 0f && temp_k2 <= 1f && temp_k1 + temp_k2 <= 1f) {
                 return true;
             }

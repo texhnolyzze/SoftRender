@@ -35,11 +35,12 @@ public class Sandbox {
 //        rast.getGraphics().setColor(Graphics.WHITE);
 //        rast.fillTriangle(500, -100, 0, 300, 300, 0, -300, 350, 0);
         Camera c = new Camera(10f, 100f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(0f, 0, 30);
+        c.setPosition(-30f, -50, 30);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(-43);
+        c.moveInDirection(-20);
         c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
-        c.rotateDirectionAround(0, 1, 0, (float) Math.toRadians(24));
+        c.rotateDirectionAround(0, 1, 0, (float) Math.toRadians(30));
+        c.rotateDirectionAround(0, 0, 1, (float) Math.toRadians(-17));
         c.updateViewMatrix();
         M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
         MI instance = new MI();
@@ -60,7 +61,7 @@ public class Sandbox {
         ));
 //        r.render(c, instance, ShadeMode.GOURAUD);
         long t = System.nanoTime();
-        r.render(c, instance, ShadeMode.GOURAUD);
+        r.render(c, instance, ShadeMode.FLAT);
         System.out.println(System.nanoTime() - t);
         ImageIO.write(g.getAsImage(), "jpg", new File("./src/sandbox/out/1.jpg"));
     }
