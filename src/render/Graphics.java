@@ -1,7 +1,7 @@
 package render;
 
 import java.awt.image.BufferedImage;
-import static render.MathUtils.roundPositive;
+import static render.MathUtils.*;
 
 /**
  *
@@ -18,13 +18,35 @@ public interface Graphics {
     int getWidth();
     int getHeight();
     
+    int getRGBInHash(int hash);
+    int getRGBInXY(int x, int y);
+    
     void setColor(int rgb);
     default void setColor(int r, int g, int b) {
         setColor(rgb(r, g, b));
     }
     
-    void plot(int x, int y);
-    void plot(int x, int y, int rgb);
+    void plotToHash(int hash);
+    void plotToHash(int hash, int rgb);
+    
+    void plotToXY(int x, int y);
+    void plotToXY(int x, int y, int rgb);
+    
+    default void modulateInHash(int hash, int rgb) {
+        int h_rgb = getRGBInHash(hash);
+        plotToHash(
+            hash, 
+            rgb(
+                (red(h_rgb) * red(rgb)) / 255, 
+                (green(h_rgb) * green(rgb)) / 255, 
+                (blue(h_rgb) * blue(rgb)) / 255
+            )
+        );
+    }
+    
+    default void modulateInXY(int x, int y, int rgb) {
+        modulateInHash(hash(x, y, getWidth()), rgb);
+    }
     
     public static int rgb(int r, int g, int b) {
         return ((r << 16) | (g << 8)) | b;
@@ -76,6 +98,16 @@ public interface Graphics {
         public int getHeight() {
             return h;
         }
+        
+        @Override
+        public int getRGBInHash(int hash) {
+            return data[hash];
+        }
+
+        @Override
+        public int getRGBInXY(int x, int y) {
+            return data[hash(x, y, w)];
+        }
 
         @Override
         public void setColor(int rgb) {
@@ -91,13 +123,23 @@ public interface Graphics {
         }
 
         @Override
-        public void plot(int x, int y) {
-            data[x + w * y] = rgb;
+        public void plotToHash(int hash) {
+            data[hash] = rgb;
+        }
+        
+        @Override
+        public void plotToHash(int hash, int rgb) {
+            data[hash] = rgb;
+        }
+        
+        @Override
+        public void plotToXY(int x, int y) {
+            data[hash(x, y, w)] = rgb;
         }
 
         @Override
-        public void plot(int x, int y, int rgb) {
-            data[x + w * y] = rgb;
+        public void plotToXY(int x, int y, int rgb) {
+            data[hash(x, y, w)] = rgb;
         }
         
         public BufferedImage getAsImage() {

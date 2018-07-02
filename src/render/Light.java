@@ -1,7 +1,7 @@
 package render;
 
 import static render.MathUtils.clamp;
-import render.Vector3f.vec3;
+import render.Vector4f.vec4;
 
 /**
  *
@@ -85,11 +85,11 @@ public abstract class Light<T> {
     
     public static class DirectionLight extends NotAmbientLight<DirectionLight> {
         
-        vec3 dir = new vec3();
+        vec4 dir = new vec4();
 
-//      this vector also represents the position of the light source, 
+//      this vector also can represents the position of the light source, 
 //      if we multiply its components by a large number
-        vec3 dir_inv = new vec3(); 
+        vec4 dir_inv = new vec4(); 
 
         public DirectionLight(float ar, float ag, float ab, 
                               float dr, float dg, float db, 
@@ -121,7 +121,9 @@ public abstract class Light<T> {
     
     public static class PointLight extends NotAmbientLight<PointLight> {
         
-        vec3 pos = new vec3();
+        public static float ATTENUATION_EPS = 0.001f;
+        
+        vec4 pos = new vec4();
         float kc, kl, kq; // constant, linear and quadratic attenuation coefficients
 
         public PointLight(float ar, float ag, float ab, 

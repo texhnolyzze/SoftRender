@@ -1,16 +1,42 @@
 package render;
 
+import render.Vector4f.vec4;
+
 /**
  *
  * @author Texhnolyze
  */
 public interface Face {
     
-    Vector3f norm();
+    static final vec4 TEMP_NORM = new vec4();
+    static final vec4 TEMP_MEDIPOINT = new vec4();
     
-    Vertex v0();
-    Vertex v1();
-    Vertex v2();
+    default Vector4f norm() {
+        float x02 = vertex3().pos().x() - vertex1().pos().x();
+        float y02 = vertex3().pos().y() - vertex1().pos().y();
+        float z02 = vertex3().pos().z() - vertex1().pos().z();
+        float x01 = vertex2().pos().x() - vertex1().pos().x();
+        float y01 = vertex2().pos().y() - vertex1().pos().y();
+        float z01 = vertex2().pos().z() - vertex1().pos().z();
+        return TEMP_NORM.set(
+            y01 * z02 - z01 * y02,
+            z01 * x02 - x01 * z02,
+            x01 * y02 - y01 * x02
+        ).normalize();
+    }    
+    
+    Vertex vertex1();
+    Vertex vertex2();
+    Vertex vertex3();
+    
+    float u1();
+    float v1();
+    
+    float u2();
+    float v2();
+    
+    float u3();
+    float v3();
     
     boolean isTwoFaced();
     
@@ -19,11 +45,10 @@ public interface Face {
     float getTempBlue();
     void setTempRGB(float r, float g, float b);
     
-    default Vector3f getMediPoint(Vector3f dest) {
-        return dest.set(
-            (v0().pos().x() + v1().pos().x() + v2().pos().x()) / 3f, 
-            (v0().pos().y() + v1().pos().y() + v2().pos().y()) / 3f, 
-            (v0().pos().z() + v1().pos().z() + v2().pos().z()) / 3f
+    default Vector4f getMediPoint() {
+        return TEMP_MEDIPOINT.set((vertex1().pos().x() + vertex2().pos().x() + vertex3().pos().x()) / 3f, 
+            (vertex1().pos().y() + vertex2().pos().y() + vertex3().pos().y()) / 3f, 
+            (vertex1().pos().z() + vertex2().pos().z() + vertex3().pos().z()) / 3f
         );
     }
     

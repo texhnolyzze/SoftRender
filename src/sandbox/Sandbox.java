@@ -1,26 +1,30 @@
 package sandbox;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javafx.util.Pair;
 import javax.imageio.ImageIO;
 import render.AABB;
-import render.Light.AmbientLight;
-import render.Light.DirectionLight;
+import render.Bitmap;
 import render.Camera;
 import render.Face;
+import render.Graphics;
 import render.Graphics.DefaultGraphics;
-import render.Light.PointLight;
+import render.Light.AmbientLight;
+import render.Light.DirectionLight;
 import render.Material;
 import render.Model;
 import render.ModelInstance;
-import render.Rasterizer3D;
 import render.Renderer;
 import render.Renderer.ShadeMode;
-import render.Vector3f;
 import render.Vertex;
+import render.Vector4f;
 
 /**
  *
@@ -29,75 +33,109 @@ import render.Vertex;
 public class Sandbox {
     
     public static void main(String[] args) throws IOException {
-        DefaultGraphics g = new DefaultGraphics(1024, 768);
+        DefaultGraphics g = new DefaultGraphics(1920, 1080);
         Renderer r = new Renderer(g);
-        Rasterizer3D rast = r.getRasterizer();
+        r.setStroke(Graphics.WHITE);
+//        Rasterizer3D rast = r.getRasterizer();
+//        rast.getGraphics().setColor(Graphics.WHITE);
+//        rast.fillTriangle(100, 100, 5f, 500, 500, 100f, 50, 1000, 50f);
+//        rast.getGraphics().setColor(rgb(1f, 0f, 0f));
+//        rast.fillTriangle(120, 54, 4f, 400, 550, 101f, 39, 700, 51f);
+//        rast.line(300, 300, 1f, 1000, 700, 100f);
 //        rast.getGraphics().setColor(Graphics.WHITE);
 //        rast.fillTriangle(500, -100, 0, 300, 300, 0, -300, 350, 0);
-        Camera c = new Camera(10f, 100f, 45, g.getWidth(), g.getHeight());
-        c.setPosition(-30f, -50, 30);
+        Camera c = new Camera(0.1f, 100f, 45, g.getWidth(), g.getHeight());
+        c.setPosition(1, 1, 1);
         c.lookAt(0, 0, 0);
-        c.moveInDirection(-20);
-        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(0));
-        c.rotateDirectionAround(0, 1, 0, (float) Math.toRadians(30));
-        c.rotateDirectionAround(0, 0, 1, (float) Math.toRadians(-17));
+        c.rotate(0, 1, 0, 0, 0, 0, (float) Math.toRadians(100));
+        c.rotateDirectionAround(0, 1, 0, (float) Math.toRadians(0));
+        c.rotateDirectionAround(1, 0, 0, (float) Math.toRadians(0));
+        float f = -60f;
+        c.moveInDirection(f);
         c.updateViewMatrix();
-        M m = fromOBJ(new File("src/sandbox/obj/sphere.obj"));
-        MI instance = new MI();
-        instance.m = m;
+        M m1 = fromOBJ(new File("src/sandbox/obj/sphere.obj"), 0);
+        MI instance1 = new MI();
+        instance1.m = m1;
         r.getAmbientLights().add(new AmbientLight(0.3f, 0.3f, 0.3f));
         r.getDirectionLights().add(new DirectionLight(
             0.3f, 0.3f, 0.3f,
-            0.3f, 0.3f, 0.3f, 
-            0.6f, 0.6f, 0.6f, 
+            0.7f, 0.7f, 0.7f, 
+            0.5f, 0.5f, 0.5f, 
             -1f, -1f, -1f)
         );
-        r.getPointLights().add(new PointLight(
-            0.5f, 0.5f, 0.5f,
-            0.3f, 0.4f, 0.4f,
-            0.4f, 0.5f, 0.1f,
-            0f, 0f, 1f,
-            1f, 0.5f, 0.1f
-        ));
-//        r.render(c, instance, ShadeMode.GOURAUD);
+        r.render(c, instance1, ShadeMode.GOURAUD, true);
         long t = System.nanoTime();
-        r.render(c, instance, ShadeMode.FLAT);
+//        r.render(c, instance2, ShadeMode.FLAT, true);
         System.out.println(System.nanoTime() - t);
-        ImageIO.write(g.getAsImage(), "jpg", new File("./src/sandbox/out/1.jpg"));
+//        r.getRasterizer().drawZBuffer(r.getRasterizer().getGraphics());
+        ImageIO.write(g.getAsImage(), "jpg", new File("./src/sandbox/out/" + 1 + ".jpg"));
+       
     }
     
-    static M fromOBJ(File OBJFile) throws IOException {
+    static M fromOBJ(File OBJFile, float alpha) throws IOException {
+        float temp_x, temp_z;
+        float ca = (float) Math.cos(alpha), sa = (float) Math.sin(alpha);
         List<Vec> normals = new ArrayList<>();
+        List<Pair<Float, Float>> tex_coords = new ArrayList<>();
         M m = new M();
         Scanner s = new Scanner(OBJFile);
         while (s.hasNextLine()) {
             String[] split = s.nextLine().split(" ");
-            if (split[0].equals("v")) {
-                V v = new V();
-                v.pos = new Vec();
-                v.pos.x = Float.parseFloat(split[1]);
-                v.pos.y = Float.parseFloat(split[2]);
-                v.pos.z = Float.parseFloat(split[3]);
-                m.vertices.add(v);
-            } else if (split[0].equals("vn")) {
-                Vec n = new Vec();
-                n.x = Float.parseFloat(split[1]);
-                n.y = Float.parseFloat(split[2]);
-                n.z = Float.parseFloat(split[3]);
-                normals.add(n);
-            } else if (split[0].equals("f")) {
-                F f = new F();
-                String[] v0 = split[1].split("/");
-                String[] v1 = split[2].split("/");
-                String[] v2 = split[3].split("/");
-                f.v0 = (V) m.vertices.get(Integer.parseInt(v0[0]) - 1);
-                f.v1 = (V) m.vertices.get(Integer.parseInt(v1[0]) - 1);
-                f.v2 = (V) m.vertices.get(Integer.parseInt(v2[0]) - 1);
-                f.v0.norm = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
-                f.v1.norm = (Vec) normals.get(Integer.parseInt(v1[2]) - 1);
-                f.v2.norm = (Vec) normals.get(Integer.parseInt(v2[2]) - 1);                
-                f.n = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
-                m.faces.add(f);
+            switch (split[0]) {
+                case "v":
+                    {
+                        V v = new V();
+                        v.pos = new Vec();
+                        v.pos.x = Float.parseFloat(split[1]);
+                        v.pos.y = Float.parseFloat(split[2]);
+                        v.pos.z = Float.parseFloat(split[3]);
+                        temp_x = v.pos.x * ca - v.pos.z * sa;
+                        temp_z = v.pos.x * sa + v.pos.z * ca;
+                        v.pos.x = temp_x;
+                        v.pos.z = temp_z;
+                        m.vertices.add(v);
+                        break;
+                    }
+                case "vn":
+                    Vec n = new Vec();
+                    n.x = Float.parseFloat(split[1]);
+                    n.y = Float.parseFloat(split[2]);
+                    n.z = Float.parseFloat(split[3]);
+                    temp_x = n.x * ca - n.z * sa;
+                    temp_z = n.x * sa + n.z * ca;
+                    n.x = temp_x;
+                    n.z = temp_z;
+                    normals.add(n);
+                    break;
+                case "f":
+                    F f = new F();
+                    String[] v0 = split[1].split("/");
+                    String[] v1 = split[2].split("/");
+                    String[] v2 = split[3].split("/");
+                    f.vertex0 = (V) m.vertices.get(Integer.parseInt(v0[0]) - 1);
+                    f.vertex1 = (V) m.vertices.get(Integer.parseInt(v1[0]) - 1);
+                    f.vertex2 = (V) m.vertices.get(Integer.parseInt(v2[0]) - 1);
+                    f.u1 = tex_coords.get(Integer.parseInt(v0[1]) - 1).getKey();
+                    f.v1 = tex_coords.get(Integer.parseInt(v0[1]) - 1).getValue();
+                    f.u2 = tex_coords.get(Integer.parseInt(v1[1]) - 1).getKey();
+                    f.v2 = tex_coords.get(Integer.parseInt(v1[1]) - 1).getValue();
+                    f.u3 = tex_coords.get(Integer.parseInt(v2[1]) - 1).getKey();
+                    f.v3 = tex_coords.get(Integer.parseInt(v2[1]) - 1).getValue();
+                    f.vertex0.norm = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
+                    f.vertex1.norm = (Vec) normals.get(Integer.parseInt(v1[2]) - 1);
+                    f.vertex2.norm = (Vec) normals.get(Integer.parseInt(v2[2]) - 1);
+                    f.n = (Vec) normals.get(Integer.parseInt(v0[2]) - 1);
+                    m.faces.add(f);
+                    break;
+                case "vt":
+                    {
+                        float u = Float.parseFloat(split[1]);
+                        float v = Float.parseFloat(split[2]);
+                        tex_coords.add(new Pair<>(u, v));
+                        break;
+                    }
+                default:
+                    break;
             }
         }
         return m;
@@ -110,12 +148,12 @@ public class Sandbox {
         float r = -1f, g, b;
         
         @Override
-        public Vector3f pos() {
+        public Vector4f pos() {
             return pos;
         }
 
         @Override
-        public Vector3f norm() {
+        public Vector4f norm() {
             return norm;
         }
         
@@ -149,9 +187,9 @@ public class Sandbox {
     }
     
     
-    static class Vec implements Vector3f {
+    static class Vec implements Vector4f {
 
-        float x, y, z;
+        float x, y, z, w;
         
         @Override
         public float x() {
@@ -169,10 +207,24 @@ public class Sandbox {
         }
 
         @Override
-        public Vector3f set(float x, float y, float z) {
+        public Vector4f set(float x, float y, float z) {
             this.x = x;
             this.y = y;
             this.z = z;
+            return this;
+        }
+
+        @Override
+        public float w() {
+            return w;
+        }
+
+        @Override
+        public Vector4f set(float x, float y, float z, float w) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+            this.w = w;
             return this;
         }
         
@@ -180,29 +232,25 @@ public class Sandbox {
     
     static class F implements Face {
 
-        V v0, v1, v2;
+        V vertex0, vertex1, vertex2;
+        float u1, v1, u2, v2, u3, v3;
         Vec n;
         
         float r, g, b;
-        
+
         @Override
-        public Vector3f norm() {
-            return n;
+        public Vertex vertex1() {
+            return vertex0;
         }
 
         @Override
-        public Vertex v0() {
-            return v0;
+        public Vertex vertex2() {
+            return vertex1;
         }
 
         @Override
-        public Vertex v1() {
-            return v1;
-        }
-
-        @Override
-        public Vertex v2() {
-            return v2;
+        public Vertex vertex3() {
+            return vertex2;
         }
 
         @Override
@@ -231,13 +279,43 @@ public class Sandbox {
         public float getTempBlue() {
             return b;
         }
+
+        @Override
+        public float u1() {
+            return u1;
+        }
+
+        @Override
+        public float v1() {
+            return v1;
+        }
+
+        @Override
+        public float u2() {
+            return u2;
+        }
+
+        @Override
+        public float v2() {
+            return v2;
+        }
+
+        @Override
+        public float u3() {
+            return u3;
+        }
+
+        @Override
+        public float v3() {
+            return v3;
+        }
         
     }
     
     static class MI implements ModelInstance {
 
         M m;
-        Material mat;
+        Material mat = Material.CHROME;
         
         @Override
         public Model getModel() {
@@ -256,6 +334,39 @@ public class Sandbox {
         @Override
         public AABB getAABB() {
             return null;
+        }
+
+        @Override
+        public Bitmap getTexture() {
+            return new Bitmap() {
+                BufferedImage img;
+                {
+                    try {
+                        img = ImageIO.read(new File("2.jpg"));
+                    } catch (IOException ex) {
+                        Logger.getLogger(Sandbox.class.getName()).log(Level.SEVERE, null, ex);
+                    }
+                }
+                @Override
+                public int getWidth() {
+                    return img.getWidth();
+                }
+
+                @Override
+                public int getHeight() {
+                    return img.getHeight();
+                }
+
+                @Override
+                public int getRGB(int x, int y) {
+                    return img.getRGB(x, y);
+                }
+            };
+        }
+
+        @Override
+        public boolean testAABB() {
+            return false;
         }
         
     }

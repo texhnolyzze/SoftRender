@@ -1,5 +1,7 @@
 package render;
 
+import java.util.Random;
+
 /**
  *
  * @author Texhnolyze
@@ -10,12 +12,24 @@ public final class MathUtils {
     
     static float[] buildSqrtTable(int w, int h) {
         float[] table = new float[w * h];
-        for (int x = 0; x < w; x++) {
-            for (int y = 0; y < h; y++) {
-                table[x + y * w] = (float) Math.sqrt(x * x + y * y);
+        for (int y = 0, hash = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                table[hash++] = (float) Math.sqrt(x * x + y * y);
             }
         }
         return table;
+    }
+    
+    public static int hash(int x, int y, int w) {
+        return x + y * w;
+    }
+    
+    public static int xFromHash(int hash, int w) {
+        return hash % w;
+    }
+    
+    public static int yFromHash(int hash, int w) {
+        return hash / w;
     }
     
     public static float clamp(float x, float min, float max) {
@@ -86,32 +100,12 @@ public final class MathUtils {
         return Math.max(start1, start2) < Math.min(end1, end2);
     }
     
-//  Static methods of this class are used in inner cycles of the Rasterizer3D class. 
-//  The arguments in the methods below are all greater or equal to 0.
-//  Note that (fixed (+/-) fixed = fixed), (fixed * int = fixed), (fixed / int = fixed)
-    static class Fixed {
+    static int make_fixed_16x16(int val) {
+        return val << 16;
+    }
         
-        static int make_fixed_8x24(int val) {
-            return val << 24;
-        }
-        
-        static int make_fixed_8x24(float val) {
-            return (int) (val * 16777216.0f + 0.5f);
-        }
-        
-        static int make_fixed_16x16(int val) {
-            return val << 16;
-        }
-        
-//      rounds fixed value to the nearest integer value.
-        static int round_fixed_8x24(int fixed) {
-            return (fixed + (1 << 23)) >>> 24;
-        }
-        
-        static int round_fixed_16x16(int fixed) {
-            return (fixed + (1 << 15)) >>> 16;
-        }
-        
+    static int round_fixed_16x16(int fixed) {
+        return (fixed + (1 << 15)) >>> 16;
     }
     
 }

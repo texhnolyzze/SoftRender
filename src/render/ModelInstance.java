@@ -8,8 +8,10 @@ public interface ModelInstance {
     
     Model getModel();
     Material getMaterial();
+    Bitmap getTexture();
     
     AABB getAABB();
+    boolean testAABB();
     
     void translateModelIntoWorldSpace();
     
