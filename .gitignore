@@ -1,1 +1,5 @@
-/build/
+build/
+dist/
+test/sandbox/out
+nbproject/
+build.xml

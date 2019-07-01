@@ -7,11 +7,18 @@ package render;
 public interface ModelInstance {
     
     Model getModel();
+    
+    ShadeMode getShadeMode();
     Material getMaterial();
+    
+    boolean texture();
     Bitmap getTexture();
     
-    AABB getAABB();
     boolean testAABB();
+    AABB getAABB();
+
+    boolean isShadowCaster();
+    boolean isShadowReceiver();
     
     void translateModelIntoWorldSpace();
     

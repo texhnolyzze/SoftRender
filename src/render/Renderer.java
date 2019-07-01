@@ -7,17 +7,13 @@ import render.Light.AmbientLight;
 import render.Light.DirectionLight;
 import render.Light.PointLight;
 import static render.MathUtils.round;
-import render.Vector4f.vec4;
+import render.Vector3f.vec3;
 
 /**
  *
  * @author Texhnolyze
  */
 public class Renderer {
-
-    public enum ShadeMode {
-        NO_SHADE, FLAT, GOURAUD
-    }
     
     private final Rasterizer3D rasterizer;
     
@@ -28,6 +24,8 @@ public class Renderer {
     private int strokeRGB; // if no shade -- this color will be used int triangle stroke
     
     private Camera curr_camera;
+    private Scene curr_scene;
+    private Model curr_model;
     private Bitmap curr_tex;
     private Material curr_mat;
     private float tex_w, tex_h;
@@ -35,20 +33,28 @@ public class Renderer {
     private int curr_face_idx;
     private Face[] temp_faces = new Face[1024];
     
-    private final vec4 
-            temp_vec1 = new vec4(), 
-            temp_vec2 = new vec4(), 
-            rgb_vec = new vec4(),
-            norm_vec = new vec4(),
-            point_vec = new vec4();
+    private final vec3 
+            temp_vec1 = new vec3(), 
+            temp_vec2 = new vec3(), 
+            rgb_vec = new vec3(),
+            norm_vec = new vec3(),
+            point_vec = new vec3();
     
     
     public Renderer(Graphics g) {
         rasterizer = new Rasterizer3D(g);
     }
     
-    public Rasterizer3D getRasterizer() {
-        return rasterizer;
+    public void drawZBuffer(Graphics g) {
+        rasterizer.drawZBuffer(g);
+    }
+    
+    public void clearZBuffer() {
+        rasterizer.clearZBuffer();
+    }
+    
+    public Graphics getGraphics() {
+        return rasterizer.getGraphics();
     }
     
     public List<AmbientLight> getAmbientLights() {return ambLights;}
@@ -63,25 +69,27 @@ public class Renderer {
         strokeRGB = rgb;
     }
     
-    public void render(Camera c, ModelInstance instance, final ShadeMode shadeMode, final boolean texture) {
-        curr_camera = c;
+    public void render(Camera c, ModelInstance instance) {
         if (instance.testAABB()) {
             if (!c.testAABB(instance.getAABB()))
                 return;
         }
-        instance.translateModelIntoWorldSpace();
-        Model m = instance.getModel();
-        curr_mat = instance.getMaterial();
+        curr_camera = c;
         curr_tex = instance.getTexture();
+        curr_mat = instance.getMaterial();
+        final boolean texture = instance.texture();
+        final ShadeMode shadeMode = instance.getShadeMode();
+        instance.translateModelIntoWorldSpace();
+        curr_model = instance.getModel();
         if (texture) {
             tex_w = curr_tex.getWidth() - 1;
             tex_h = curr_tex.getHeight() - 1;
         }
-        if (m.numFaces() > temp_faces.length)
-            temp_faces = new Face[2 * m.numFaces()];
-        for (Face f : m.faces()) {
+        if (curr_model.numFaces() > temp_faces.length)
+            temp_faces = new Face[2 * curr_model.numFaces()];
+        for (Face f : curr_model.faces()) {
             if (!f.isTwoFaced()) { // try to cull face
-                Vector4f n = f.norm(); 
+                Vector3f n = f.norm(); 
                 if (MathUtils.dot(c.pos.x - f.vertex1().pos().x(), c.pos.y - f.vertex1().pos().y(), c.pos.z - f.vertex1().pos().z(), n.x(), n.y(), n.z()) <= 0.0f) 
                     continue;   
             }
@@ -102,20 +110,20 @@ public class Renderer {
                 }
                 break;
         }
-        c.toViewSpace(m.vertices());
-        c.project(m.vertices(), rasterizer.getGraphics().getWidth(), rasterizer.getGraphics().getHeight());
+        c.toViewSpace(curr_model.vertices());
+        c.project(curr_model.vertices(), rasterizer.getGraphics().getWidth(), rasterizer.getGraphics().getHeight());
         switch (shadeMode) {
             case NO_SHADE:
                 if (texture) {
                     for (int i = 0; i < curr_face_idx; i++) {
                         Face f = temp_faces[i];
-                        Vector4f v0 = f.vertex1().pos();
-                        Vector4f v1 = f.vertex2().pos();
-                        Vector4f v2 = f.vertex3().pos();
+                        Vector3f v0 = f.vertex1().pos();
+                        Vector3f v1 = f.vertex2().pos();
+                        Vector3f v2 = f.vertex3().pos();
                         rasterizer.fillTexturedTriangle(
-                            round(v0.x()), round(v0.y()), v0.w(), tex_w * f.u1(), tex_h * f.v1(), 
-                            round(v1.x()), round(v1.y()), v1.w(), tex_w * f.u2(), tex_h * f.v2(), 
-                            round(v2.x()), round(v2.y()), v2.w(), tex_w * f.u3(), tex_h * f.v3(), 
+                            round(v0.x()), round(v0.y()), v0.z(), tex_w * f.u1(), tex_h * f.v1(), 
+                            round(v1.x()), round(v1.y()), v1.z(), tex_w * f.u2(), tex_h * f.v2(), 
+                            round(v2.x()), round(v2.y()), v2.z(), tex_w * f.u3(), tex_h * f.v3(), 
                             curr_tex, false
                         );
                     }
@@ -123,13 +131,13 @@ public class Renderer {
                     rasterizer.getGraphics().setColor(strokeRGB);
                     for (int i = 0; i < curr_face_idx; i++) {
                         Face f = temp_faces[i];
-                        Vector4f v0 = f.vertex1().pos();
-                        Vector4f v1 = f.vertex2().pos();
-                        Vector4f v2 = f.vertex3().pos();
+                        Vector3f v0 = f.vertex1().pos();
+                        Vector3f v1 = f.vertex2().pos();
+                        Vector3f v2 = f.vertex3().pos();
                         rasterizer.strokeTriangle(
-                            round(v0.x()), round(v0.y()), v0.w(), 
-                            round(v1.x()), round(v1.y()), v1.w(), 
-                            round(v2.x()), round(v2.y()), v2.w()
+                            round(v0.x()), round(v0.y()), v0.z(), 
+                            round(v1.x()), round(v1.y()), v1.z(), 
+                            round(v2.x()), round(v2.y()), v2.z()
                         );
                     }
                 }
@@ -140,9 +148,9 @@ public class Renderer {
                         Face f = temp_faces[i];
                         rasterizer.getGraphics().setColor(rgb(f.getTempRed(), f.getTempGreen(), f.getTempBlue()));
                         rasterizer.fillTexturedTriangle(
-                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().w(), tex_w * f.u1(), tex_h * f.v1(), 
-                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().w(), tex_w * f.u2(), tex_h * f.v2(), 
-                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().w(), tex_w * f.u3(), tex_h * f.v3(),
+                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().z(), tex_w * f.u1(), tex_h * f.v1(), 
+                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().z(), tex_w * f.u2(), tex_h * f.v2(), 
+                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().z(), tex_w * f.u3(), tex_h * f.v3(),
                             curr_tex, true
                         );
                     }
@@ -151,9 +159,9 @@ public class Renderer {
                         Face f = temp_faces[i];
                         rasterizer.getGraphics().setColor(rgb(f.getTempRed(), f.getTempGreen(), f.getTempBlue()));
                         rasterizer.fillTriangle(
-                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().w(), 
-                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().w(), 
-                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().w()
+                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().z(), 
+                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().z(), 
+                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().z()
                         );
                     }
                 }
@@ -163,9 +171,9 @@ public class Renderer {
                     for (int i = 0; i < curr_face_idx; i++) {
                         Face f = temp_faces[i];
                         rasterizer.fillTexturedTriangleInterpolateColor(
-                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().w(), tex_w * f.u1(), tex_h * f.v1(), 255f * f.vertex1().getTempRed(), 255f * f.vertex1().getTempGreen(), 255f * f.vertex1().getTempBlue(), 
-                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().w(), tex_w * f.u2(), tex_h * f.v2(), 255f * f.vertex2().getTempRed(), 255f * f.vertex2().getTempGreen(), 255f * f.vertex2().getTempBlue(),
-                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().w(), tex_w * f.u3(), tex_h * f.v3(), 255f * f.vertex3().getTempRed(), 255f * f.vertex3().getTempGreen(), 255f * f.vertex3().getTempBlue(), 
+                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().z(), tex_w * f.u1(), tex_h * f.v1(), 255f * f.vertex1().getTempRed(), 255f * f.vertex1().getTempGreen(), 255f * f.vertex1().getTempBlue(), 
+                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().z(), tex_w * f.u2(), tex_h * f.v2(), 255f * f.vertex2().getTempRed(), 255f * f.vertex2().getTempGreen(), 255f * f.vertex2().getTempBlue(),
+                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().z(), tex_w * f.u3(), tex_h * f.v3(), 255f * f.vertex3().getTempRed(), 255f * f.vertex3().getTempGreen(), 255f * f.vertex3().getTempBlue(), 
                             curr_tex 
                         );
                     }
@@ -173,15 +181,15 @@ public class Renderer {
                     for (int i = 0; i < curr_face_idx; i++) {
                         Face f = temp_faces[i];
                         rasterizer.fillTriangleInterpolateColor(
-                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().w(), 255f * f.vertex1().getTempRed(), 255f * f.vertex1().getTempGreen(), 255f * f.vertex1().getTempBlue(), 
-                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().w(), 255f * f.vertex2().getTempRed(), 255f * f.vertex2().getTempGreen(), 255f * f.vertex2().getTempBlue(),
-                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().w(), 255f * f.vertex3().getTempRed(), 255f * f.vertex3().getTempGreen(), 255f * f.vertex3().getTempBlue() 
+                            round(f.vertex1().pos().x()), round(f.vertex1().pos().y()), f.vertex1().pos().z(), 255f * f.vertex1().getTempRed(), 255f * f.vertex1().getTempGreen(), 255f * f.vertex1().getTempBlue(), 
+                            round(f.vertex2().pos().x()), round(f.vertex2().pos().y()), f.vertex2().pos().z(), 255f * f.vertex2().getTempRed(), 255f * f.vertex2().getTempGreen(), 255f * f.vertex2().getTempBlue(),
+                            round(f.vertex3().pos().x()), round(f.vertex3().pos().y()), f.vertex3().pos().z(), 255f * f.vertex3().getTempRed(), 255f * f.vertex3().getTempGreen(), 255f * f.vertex3().getTempBlue() 
                         );
                     }
                 }
                 break;
         }
-        m.reset();
+        curr_model.reset();
         curr_face_idx = 0;
     }
     
@@ -196,72 +204,76 @@ public class Renderer {
         v.setTempRGB(rgb_vec.x, rgb_vec.y, rgb_vec.z);
     }
     
-    private void light(vec4 rgb, vec4 point, vec4 norm, vec4 view_pos) {
+    void light(vec3 rgb, vec3 point, vec3 norm, vec3 view_pos) {
         rgb.set(0f, 0f, 0f);
         view_pos.sub(point, temp_vec1).normalize();
-        vec4 view_dir = temp_vec1; // vector directed at the observer
+        vec3 view_dir = temp_vec1; // vector directed at the observer
         for (AmbientLight l : ambLights) {
             if (!l.enabled) 
                 continue;
-            rgb.x += curr_mat.getAmbientRed() * l.ar;
-            rgb.y += curr_mat.getAmbientGreen() * l.ag;
-            rgb.z += curr_mat.getAmbientBlue() * l.ab;
+            rgb.x += curr_mat.getAmbientRed() * l.r;
+            rgb.y += curr_mat.getAmbientGreen() * l.g;
+            rgb.z += curr_mat.getAmbientBlue() * l.b;
         }
         for (DirectionLight l : dirLights) {
             if (!l.enabled)
                 continue;
-            rgb.x += curr_mat.getAmbientRed() * l.ar;
-            rgb.y += curr_mat.getAmbientGreen() * l.ag;
-            rgb.z += curr_mat.getAmbientBlue() * l.ab;
+            rgb.x += curr_mat.getAmbientRed() * l.r;
+            rgb.y += curr_mat.getAmbientGreen() * l.g;
+            rgb.z += curr_mat.getAmbientBlue() * l.b;
             float dp = l.dir_inv.dot(norm);
             if (dp > 0f) {
-                rgb.x += dp * curr_mat.getDiffuseRed() * l.dr;
-                rgb.y += dp * curr_mat.getDiffuseGreen() * l.dg;
-                rgb.z += dp * curr_mat.getDiffuseBlue() * l.db;
+                rgb.x += dp * curr_mat.getDiffuseRed() * l.r;
+                rgb.y += dp * curr_mat.getDiffuseGreen() * l.g;
+                rgb.z += dp * curr_mat.getDiffuseBlue() * l.b;
             }
 //          note that, for example, for a cube whose side is 
 //          represented by two triangles, the specular lighting 
-//          component may be look ridiculous, because one of the triangles 
+//          component in Gouraud or flat shade mode
+//          may be look ridiculous, because one of the triangles 
 //          will have a color different from the other
             l.dir_inv.reflect(norm, temp_vec2);
-            vec4 light_dir_reflected = temp_vec2; 
+            vec3 light_dir_reflected = temp_vec2; 
             dp = light_dir_reflected.dot(view_dir);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, curr_mat.getShininess());
-                rgb.x += pow * curr_mat.getSpecularRed() * l.sr;
-                rgb.y += pow * curr_mat.getSpecularGreen() * l.sg;
-                rgb.z += pow * curr_mat.getSpecularBlue() * l.sb;
+                rgb.x += pow * curr_mat.getSpecularRed() * l.r;
+                rgb.y += pow * curr_mat.getSpecularGreen() * l.g;
+                rgb.z += pow * curr_mat.getSpecularBlue() * l.b;
             }
         }
         for (PointLight l : pointLights) {
             if (!l.enabled)
                 continue;
             temp_vec2.set(l.pos).sub(point, temp_vec2);
-            vec4 light_dir = temp_vec2; // vector directed at the point light source
-            float d_sqr = light_dir.len2(), d = (float) Math.sqrt(d_sqr);
-            float attenuation = 1f / (l.kc + l.kl * d + l.kq * d_sqr);
-            if (attenuation <= PointLight.ATTENUATION_EPS)
+            vec3 light_dir = temp_vec2; // vector directed at the point light source
+            float d_sqr = light_dir.len2();
+            if (d_sqr > l.radiusSquare)
                 continue;
-            rgb.x += attenuation * curr_mat.getAmbientRed() * l.ar;
-            rgb.y += attenuation * curr_mat.getAmbientGreen() * l.ag;
-            rgb.z += attenuation * curr_mat.getAmbientBlue() * l.ab;
+            float d = (float) Math.sqrt(d_sqr);
+            float attenuation = 1f - d * l.radius_inv; // varies linearly
+            rgb.x += attenuation * curr_mat.getAmbientRed() * l.r;
+            rgb.y += attenuation * curr_mat.getAmbientGreen() * l.g;
+            rgb.z += attenuation * curr_mat.getAmbientBlue() * l.b;
             light_dir.normalize_len_known(d);
             float dp = light_dir.dot(norm);
             if (dp > 0f) {
-                rgb.x += attenuation * dp * curr_mat.getDiffuseRed() * l.dr;
-                rgb.y += attenuation * dp * curr_mat.getDiffuseGreen() * l.dg;
-                rgb.z += attenuation * dp * curr_mat.getDiffuseBlue() * l.db;
+                rgb.x += attenuation * dp * curr_mat.getDiffuseRed() * l.r;
+                rgb.y += attenuation * dp * curr_mat.getDiffuseGreen() * l.g;
+                rgb.z += attenuation * dp * curr_mat.getDiffuseBlue() * l.b;
             }
             light_dir.reflect(norm, light_dir); 
             dp = light_dir.dot(view_dir);
             if (dp > 0f) {
                 float pow = (float) Math.pow(dp, curr_mat.getShininess());
-                rgb.x += attenuation * pow * curr_mat.getSpecularRed() * l.sr;
-                rgb.y += attenuation * pow * curr_mat.getSpecularGreen() * l.sg;
-                rgb.z += attenuation * pow * curr_mat.getSpecularBlue() * l.sb;
+                rgb.x += attenuation * pow * curr_mat.getSpecularRed() * l.r;
+                rgb.y += attenuation * pow * curr_mat.getSpecularGreen() * l.g;
+                rgb.z += attenuation * pow * curr_mat.getSpecularBlue() * l.b;
             }
         }
         rgb.set(rgb.x > 1f ? 1f: rgb.x, rgb.y > 1f ? 1f: rgb.y, rgb.z > 1f ? 1f: rgb.z);
     }
+    
+    
     
 }

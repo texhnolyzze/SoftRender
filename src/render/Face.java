@@ -1,6 +1,6 @@
 package render;
 
-import render.Vector4f.vec4;
+import render.Vector3f.vec3;
 
 /**
  *
@@ -8,10 +8,10 @@ import render.Vector4f.vec4;
  */
 public interface Face {
     
-    static final vec4 TEMP_NORM = new vec4();
-    static final vec4 TEMP_MEDIPOINT = new vec4();
+    static final vec3 TEMP_NORM = new vec3();
+    static final vec3 TEMP_MEDIPOINT = new vec3();
     
-    default Vector4f norm() {
+    default Vector3f norm() {
         float x02 = vertex3().pos().x() - vertex1().pos().x();
         float y02 = vertex3().pos().y() - vertex1().pos().y();
         float z02 = vertex3().pos().z() - vertex1().pos().z();
@@ -29,6 +29,7 @@ public interface Face {
     Vertex vertex2();
     Vertex vertex3();
     
+//-----------Texture coordinates-------------
     float u1();
     float v1();
     
@@ -37,6 +38,7 @@ public interface Face {
     
     float u3();
     float v3();
+//-------------------------------------------
     
     boolean isTwoFaced();
     
@@ -45,7 +47,7 @@ public interface Face {
     float getTempBlue();
     void setTempRGB(float r, float g, float b);
     
-    default Vector4f getMediPoint() {
+    default Vector3f getMediPoint() {
         return TEMP_MEDIPOINT.set((vertex1().pos().x() + vertex2().pos().x() + vertex3().pos().x()) / 3f, 
             (vertex1().pos().y() + vertex2().pos().y() + vertex3().pos().y()) / 3f, 
             (vertex1().pos().z() + vertex2().pos().z() + vertex3().pos().z()) / 3f

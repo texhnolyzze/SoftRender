@@ -1,7 +1,7 @@
 package render;
 
 import static render.MathUtils.dot;
-import render.Vector4f.vec4;
+import render.Vector3f.vec3;
 
 
 /**
@@ -33,7 +33,7 @@ public interface Matrix4x4f {
     
     static class mat4 implements Matrix4x4f { // just for internal usage
 
-        private static final vec4 temp = new vec4();
+        private static final vec3 temp = new vec3();
         
         final float[] values = new float[16];
         mat4() {values[M00] = values[M11] = values[M22] = values[M33] = 1f;}
@@ -57,7 +57,7 @@ public interface Matrix4x4f {
             values[M30] = values[M31] = values[M32] = 0f;
         }
         
-        void setToViewMatrix(vec4 pos, vec4 dir, vec4 up) { 
+        void setToViewMatrix(vec3 pos, vec3 dir, vec3 up) { 
             up.cross(dir, temp); // "left" vector
             values[M00] = temp.x;
             values[M01] = up.x;
@@ -76,14 +76,11 @@ public interface Matrix4x4f {
         void setToProjectionMatrix(float fov_y_rad, float aspect, 
                                           float near, float far) {
             float f = (float) (1f / (aspect * Math.tan(fov_y_rad * 0.5f)));
-            float fn = 1f / (far - near);
             values[M00] = f;
             values[M11] = aspect * f;
-            values[M22] = -(far + near) * fn;
-            values[M23] = (2f * near * far) * fn;
         }
 
-        void toViewSpace(Vector4f v) {
+        void toViewSpace(Vector3f v) {
             v.set(
                 v.x() * values[M00] + v.y() * values[M10] + v.z() * values[M20] + values[M30], 
                 v.x() * values[M01] + v.y() * values[M11] + v.z() * values[M21] + values[M31], 
@@ -91,7 +88,7 @@ public interface Matrix4x4f {
             );
         }
 
-        void normalToViewSpace(Vector4f n) {
+        void normalToViewSpace(Vector3f n) {
             n.set(
                 n.x() * values[M00] + n.y() * values[M10] + n.z() * values[M20], 
                 n.x() * values[M01] + n.y() * values[M11] + n.z() * values[M21], 
@@ -99,12 +96,11 @@ public interface Matrix4x4f {
             );
         }
 
-        void project(Vector4f v) {
+        void project(Vector3f v) {
             float w_inv = -1f / v.z();
             v.set(
                 v.x() * values[M00] * w_inv, 
                 v.y() * values[M11] * w_inv,
-                (v.z() * values[M22] + values[M23]) * w_inv,
                 v.z()
             );
         }
@@ -116,7 +112,7 @@ public interface Matrix4x4f {
         }
         
         // axis is unit vector
-        void setToRotation(vec4 axis, float angle) {
+        void setToRotation(vec3 axis, float angle) {
             setToRotation(axis.x, axis.y, axis.z, angle);
         }
         
@@ -135,7 +131,7 @@ public interface Matrix4x4f {
             values[M12] = one_sub_cos * axis_z * axis_y - sin * axis_x;
         }
         
-        void setToRotationMatrix(vec4 axis, vec4 axis_pos, float angle) {
+        void setToRotationMatrix(vec3 axis, vec3 axis_pos, float angle) {
             setToRotationMatrix(axis.x, axis.y, axis.z, axis_pos.x, axis_pos.y, axis_pos.z, angle);
         }
         

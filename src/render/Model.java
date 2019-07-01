@@ -12,8 +12,10 @@ public interface Model {
     int numVertices();
     Iterable<Vertex> vertices();    
     
-//  This method is called after the ModelInstance drawing ends.
-//  It is needed to translate the model back into the local space.
+    boolean dirty();
+    void markAsDirty();
+    
+//  This method is called if model was marked as dirty.
     void reset(); 
     
 }

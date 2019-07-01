@@ -1,7 +1,7 @@
 package render;
 
 import static render.MathUtils.clamp;
-import render.Vector4f.vec4;
+import render.Vector3f.vec3;
 
 /**
  *
@@ -11,16 +11,16 @@ public abstract class Light<T> {
     
     boolean enabled = true;
     
-    float ar, ag, ab; // ambient light intensity, base for all lights.
+    float r, g, b; 
     
-    private Light(float ar, float ag, float ab) {
-        setAmbientRGB(ar, ag, ab);
+    private Light(float r, float g, float b) {
+        setRGB(r, g, b);
     }
     
-    public final T setAmbientRGB(float r, float g, float b) {
-        this.ar = clamp(r, 0f, 1f);
-        this.ag = clamp(g, 0f, 1f);
-        this.ab = clamp(b, 0f, 1f);
+    public final T setRGB(float r, float g, float b) {
+        this.r = clamp(r, 0f, 1f);
+        this.g = clamp(g, 0f, 1f);
+        this.b = clamp(b, 0f, 1f);
         return (T) this;
     } 
     
@@ -36,9 +36,17 @@ public abstract class Light<T> {
         return enabled;
     }
     
-    public float getAmbientRed() {return ar;}
-    public float getAmbientGreen() {return ag;}
-    public float getAmbientBlue() {return ab;}
+    public float getRed() {
+        return r;
+    }
+    
+    public float getGreen() {
+        return g;
+    }
+    
+    public float getBlue() {
+        return b;
+    }
     
     public static class AmbientLight extends Light<AmbientLight> {
         public AmbientLight(float r, float g, float b) {
@@ -46,56 +54,16 @@ public abstract class Light<T> {
         }
     }
     
-    private static class NotAmbientLight<T> extends Light<T> {
+    public static class DirectionLight extends Light<DirectionLight> {
         
-        float dr, dg, db; // diffuse intensity
-        float sr, sg, sb; // specular intensity
-        
-        public NotAmbientLight(float ar, float ag, float ab,
-                               float dr, float dg, float db,
-                               float sr, float sg, float sb) {
-            super(ar, ag, ab);
-            setDiffuseRGB(dr, dg, db);
-            setSpecularRGB(sr, sg, sb);
-        }
-        
-        public final T setDiffuseRGB(float r, float g, float b) {
-            this.dr = clamp(r, 0f, 1f);
-            this.dg = clamp(g, 0f, 1f);
-            this.db = clamp(b, 0f, 1f);
-            return (T) this;
-        }
-    
-        public final T setSpecularRGB(float r, float g, float b) {
-            this.sr = clamp(r, 0f, 1f);
-            this.sg = clamp(g, 0f, 1f);
-            this.sb = clamp(b, 0f, 1f);
-            return (T) this;
-        }
-        
-        public float getDiffuseRed() {return dr;}
-        public float getDiffuseGreen() {return dg;}
-        public float getDiffuseBlue() {return db;}
-
-        public float getSpecularRed() {return sr;}
-        public float getSpecularGreen() {return sg;}
-        public float getSpecularBlue() {return sb;}
-        
-    }
-    
-    public static class DirectionLight extends NotAmbientLight<DirectionLight> {
-        
-        vec4 dir = new vec4();
+        vec3 dir = new vec3();
 
 //      this vector also can represents the position of the light source, 
 //      if we multiply its components by a large number
-        vec4 dir_inv = new vec4(); 
+        vec3 dir_inv = new vec3(); 
 
-        public DirectionLight(float ar, float ag, float ab, 
-                              float dr, float dg, float db, 
-                              float sr, float sg, float sb,
-                              float nx, float ny, float nz) {
-            super(ar, ag, ab, dr, dg, db, sr, sg, sb);
+        public DirectionLight(float r, float g, float b, float nx, float ny, float nz) {
+            super(r, g, b);
             setDirection(nx, ny, nz);
         }
         
@@ -119,20 +87,16 @@ public abstract class Light<T> {
         
     }
     
-    public static class PointLight extends NotAmbientLight<PointLight> {
+    public static class PointLight extends Light<PointLight> {
         
-        public static float ATTENUATION_EPS = 0.001f;
+        float radius;
+		float radius_inv;
+        float radiusSquare;
+        vec3 pos = new vec3();
         
-        vec4 pos = new vec4();
-        float kc, kl, kq; // constant, linear and quadratic attenuation coefficients
-
-        public PointLight(float ar, float ag, float ab, 
-                          float dr, float dg, float db, 
-                          float sr, float sg, float sb,
-                          float px, float py, float pz,
-                          float kc, float kl, float kq) {
-            super(ar, ag, ab, dr, dg, db, sr, sg, sb);
-            setPosition(px, py, pz).setAttenuationCoefficents(kc, kl, kq);
+        public PointLight(float r, float g, float b, float pos_x, float pos_y, float pos_z, float radius) {
+            super(r, g, b);
+            setPosition(pos_x, pos_y, pos_z).setRadius(radius);
         }
         
         public final PointLight setPosition(float px, float py, float pz) {
@@ -142,10 +106,12 @@ public abstract class Light<T> {
             return this;
         }
         
-        public final PointLight setAttenuationCoefficents(float kc, float kl, float kq) {
-            this.kc = clamp(kc, 0, Float.POSITIVE_INFINITY);
-            this.kl = clamp(kl, 0, Float.POSITIVE_INFINITY);
-            this.kq = clamp(kq, 0, Float.POSITIVE_INFINITY);
+        public final PointLight setRadius(float radius) {
+			if (radius <= 0f)
+				throw new IllegalArgumentException("radius must be > 0");
+            this.radius = radius;
+			this.radius_inv = 1f / radius;
+            this.radiusSquare = radius * radius;
             return this;
         }
         
@@ -153,9 +119,9 @@ public abstract class Light<T> {
         public float posY() {return pos.y;}
         public float posZ() {return pos.z;}
         
-        public float getConstantAttenuationCoefficent() {return kc;}
-        public float getLinearAttenuationCoefficent() {return kl;}
-        public float getQuadraticAttenuationCoefficent() {return kq;}
+        public float getRadius() {
+            return radius;
+        }
         
     }
     

@@ -33,10 +33,7 @@ public interface Material {
         GREEN_RUBBER    = new BaseMaterial(0.0f, 0.05f, 0.0f, 0.4f, 0.5f, 0.4f, 0.04f, 0.7f, 0.04f, .078125f),
         RED_RUBBER      = new BaseMaterial(0.05f, 0.0f, 0.0f, 0.5f, 0.4f, 0.4f, 0.7f, 0.04f, 0.04f, .078125f),
         WHITE_RUBBER    = new BaseMaterial(0.05f, 0.05f, 0.05f, 0.5f, 0.5f, 0.5f, 0.7f, 0.7f, 0.7f, .078125f),
-        YELLOW_RUBBER   = new BaseMaterial(0.05f, 0.05f, 0.0f, 0.5f, 0.5f, 0.4f, 0.7f, 0.7f, 0.04f, .078125f);        
-        
-    
-    public static final Material DEFAULT = WHITE_PLASTIC;
+        YELLOW_RUBBER   = new BaseMaterial(0.05f, 0.05f, 0.0f, 0.5f, 0.5f, 0.4f, 0.7f, 0.7f, 0.04f, .078125f);
     
     float getAmbientRed();
     float getAmbientGreen();

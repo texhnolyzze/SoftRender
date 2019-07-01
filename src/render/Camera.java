@@ -1,7 +1,7 @@
 package render;
 
 import render.Matrix4x4f.mat4;
-import render.Vector4f.vec4;
+import render.Vector3f.vec3;
 
 
 /**
@@ -19,13 +19,13 @@ public class Camera {
     private float half_h_near, half_w_near;
     private float half_h_far, half_w_far;
     
-    vec4 pos = new vec4();
-    vec4 dir = new vec4(0, 0, 1);
-    private vec4 up = new vec4(0, 1, 0);
+    vec3 pos = new vec3();
+    vec3 dir = new vec3(0, 0, 1);
+    private vec3 up = new vec3(0, 1, 0);
     
     private Frustum frustum = new Frustum();
     
-    private vec4 temp_vec = new vec4();
+    private vec3 temp_vec = new vec3();
     
     private mat4 viewMatrix = new mat4();
     private mat4 projectionMatrix = new mat4();
@@ -68,12 +68,12 @@ public class Camera {
     public float getPositionX() {return pos.x;}
     public float getPositionY() {return pos.y;}
     public float getPositionZ() {return pos.z;}
-    public Vector4f getPosition(Vector4f dest) {return dest.set(pos.x, pos.y, pos.z);}
+    public Vector3f getPosition(Vector3f dest) {return dest.set(pos.x, pos.y, pos.z);}
     
     public float getDirectionX() {return dir.x;}
     public float getDirectionY() {return dir.y;}
     public float getDirectionZ() {return dir.z;}
-    public Vector4f getDirection(Vector4f dest) {return dest.set(dir.x, dir.y, dir.z);}
+    public Vector3f getDirection(Vector3f dest) {return dest.set(dir.x, dir.y, dir.z);}
     
     public Camera lookAt(float x, float y, float z) {
         temp_vec.set(x, y, z).sub(pos, temp_vec);
@@ -98,7 +98,7 @@ public class Camera {
         up.normalize();
     }
     
-    public Camera move(Vector4f v) {
+    public Camera move(Vector3f v) {
         return move(v.x(), v.y(), v.z());
     }
     
@@ -160,7 +160,7 @@ public class Camera {
         return transformPosition(transform);
     }
     
-    public Camera setPosition(Vector4f pos) {
+    public Camera setPosition(Vector3f pos) {
         return setPosition(pos.x(), pos.y(), pos.z());
     }
     
@@ -234,19 +234,19 @@ public class Camera {
     
     private class Frustum {
         
-        private final vec4 near_left_bot  = new vec4(), 
-                     near_left_top  = new vec4(), 
-                     near_right_top = new vec4(), 
-                     near_right_bot = new vec4(),
-                     far_left_bot   = new vec4(), 
-                     far_left_top   = new vec4(), 
-                     far_right_top  = new vec4(), 
-                     far_right_bot  = new vec4();;
+        private final vec3 near_left_bot  = new vec3(), 
+                     near_left_top  = new vec3(), 
+                     near_right_top = new vec3(), 
+                     near_right_bot = new vec3(),
+                     far_left_bot   = new vec3(), 
+                     far_left_top   = new vec3(), 
+                     far_right_top  = new vec3(), 
+                     far_right_bot  = new vec3();;
         
-        private final vec4 temp_vec1 = new vec4(), 
-                     temp_vec2       = new vec4(),
-                     on_near_plane   = new vec4(), 
-                     on_far_plane    = new vec4();
+        private final vec3 temp_vec1 = new vec3(), 
+                     temp_vec2       = new vec3(),
+                     on_near_plane   = new vec3(), 
+                     on_far_plane    = new vec3();
         
         private static final int NEAR_PLANE     = 0,
                                  FAR_PLANE      = 1,
@@ -256,15 +256,18 @@ public class Camera {
                                  BOTTOM_PLANE   = 5;
                                  
         
-        private final vec4[] planes = new vec4[6]; // (normal, d)
-        private final vec4 aabb_min = new vec4(), aabb_max = new vec4();
+        private final vec3[] planes_norm = new vec3[6]; 
+        private final float[] planes_d = new float[6];
+        private final vec3 aabb_min = new vec3(), aabb_max = new vec3();
         
         Frustum() {
-            for (int i = 0; i < planes.length; i++) planes[i] = new vec4();
+            for (int i = 0; i < planes_norm.length; i++) {
+                planes_norm[i] = new vec3();
+            }
         }
         
         void update() {
-            vec4 left = up.cross(dir, temp_vec1);
+            vec3 left = up.cross(dir, temp_vec1);
             
             on_near_plane.set(pos).add(dir.x * near, dir.y * near, dir.z * near);
             
@@ -280,38 +283,38 @@ public class Camera {
             far_right_top.set(on_far_plane).add(-left.x * half_w_far, -left.y * half_w_far, -left.z * half_w_far).add(up.x * half_h_far, up.y * half_h_far, up.z * half_h_far);
             far_right_bot.set(on_far_plane).add(-left.x * half_w_far, -left.y * half_w_far, -left.z * half_w_far).add(-up.x * half_h_far, -up.y * half_h_far, -up.z * half_h_far);
             
-            planes[NEAR_PLANE].set(dir);
-            planes[NEAR_PLANE].w = dir.dot(on_near_plane);
+            planes_norm[NEAR_PLANE].set(dir);
+            planes_d[NEAR_PLANE] = dir.dot(on_near_plane);
             
-            planes[FAR_PLANE].set(-dir.x, -dir.y, -dir.z);
-            planes[FAR_PLANE].w = on_far_plane.dot(-dir.x, -dir.y, -dir.z);
+            planes_norm[FAR_PLANE].set(-dir.x, -dir.y, -dir.z);
+            planes_d[FAR_PLANE] = on_far_plane.dot(-dir.x, -dir.y, -dir.z);
             
             temp_vec1.set(near_left_bot).sub(near_left_top).cross(temp_vec2.set(far_left_top).sub(near_left_top));
             temp_vec1.normalize();
-            planes[LEFT_PLANE].set(temp_vec1);
-            planes[LEFT_PLANE].w = near_left_bot.dot(planes[LEFT_PLANE]);
+            planes_norm[LEFT_PLANE].set(temp_vec1);
+            planes_d[LEFT_PLANE] = near_left_bot.dot(planes_norm[LEFT_PLANE]);
             
-            planes[RIGHT_PLANE].set(temp_vec1).reflect(dir, planes[RIGHT_PLANE]);
-            planes[RIGHT_PLANE].w = near_right_bot.dot(planes[RIGHT_PLANE]);
+            planes_norm[RIGHT_PLANE].set(temp_vec1).reflect(dir, planes_norm[RIGHT_PLANE]);
+            planes_d[RIGHT_PLANE] = near_right_bot.dot(planes_norm[RIGHT_PLANE]);
             
             temp_vec1.set(far_left_top).sub(near_left_top).cross(temp_vec2.set(near_right_top).sub(near_left_top));
             temp_vec1.normalize();
-            planes[TOP_PLANE].set(temp_vec1);
-            planes[TOP_PLANE].w = far_left_top.dot(planes[TOP_PLANE]);
+            planes_norm[TOP_PLANE].set(temp_vec1);
+            planes_d[TOP_PLANE] = far_left_top.dot(planes_norm[TOP_PLANE]);
             
-            planes[BOTTOM_PLANE].set(temp_vec1).reflect(dir, planes[BOTTOM_PLANE]);
-            planes[BOTTOM_PLANE].w = near_left_bot.dot(planes[BOTTOM_PLANE]);
+            planes_norm[BOTTOM_PLANE].set(temp_vec1).reflect(dir, planes_norm[BOTTOM_PLANE]);
+            planes_d[BOTTOM_PLANE] = near_left_bot.dot(planes_norm[BOTTOM_PLANE]);
             
         }
         
         boolean intersects(AABB aabb) {
             aabb_min.set(aabb.posX(), aabb.posY(), aabb.posZ());
             aabb_max.set(aabb_min).add(aabb.width(), aabb.height(), aabb.depth());
-            for (vec4 plane : planes) {
-                float d = Math.max(aabb_min.x * plane.x, aabb_max.x * plane.x) + 
-                          Math.max(aabb_min.y * plane.y, aabb_max.y * plane.y) +
-                          Math.max(aabb_min.z * plane.z, aabb_max.z * plane.z) + 
-                          plane.w;
+            for (int i = 0; i < 6; i++) {
+                float d = Math.max(aabb_min.x * planes_norm[i].x, aabb_max.x * planes_norm[i].x) + 
+                          Math.max(aabb_min.y * planes_norm[i].y, aabb_max.y * planes_norm[i].y) +
+                          Math.max(aabb_min.z * planes_norm[i].z, aabb_max.z * planes_norm[i].z) + 
+                          planes_d[i];
                 if (d < 0)
                     return false;
             }

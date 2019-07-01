@@ -8,7 +8,18 @@ import static render.MathUtils.*;
  *
  * @author Texhnolyze
  */
-public final class Rasterizer3D {
+class Rasterizer3D {
+    
+    private static class BufferData {
+        
+        private int rgb;
+        private float z_inv;
+        
+        private Material mat;
+        private float nx, ny, nz;
+        private boolean need_light;
+        
+    } 
     
     private static final int X_LESS_0 = 8,
                              Y_LESS_0 = 2,
@@ -46,19 +57,21 @@ public final class Rasterizer3D {
     
     private float[] z_buff; // z buffer contains inversed z values
     private float[] sqrt_table;
+	
+    private BufferData[] buffer;
     
-    public Rasterizer3D(Graphics g) {
+    Rasterizer3D(Graphics g) {
         this.g = g;
         updateBounds();
         for (int i = 0; i < tri_points.length; i++)
             tri_points[i] = new TriPoint();
     }
     
-    public Graphics getGraphics() {
+    Graphics getGraphics() {
         return g;
     }
     
-    public void updateBounds() {
+    void updateBounds() {
         if (g.getWidth() != w || g.getHeight() != h) {
             w = g.getWidth();
             h = g.getHeight();
@@ -70,12 +83,12 @@ public final class Rasterizer3D {
         }
     }
     
-    public void clearZBuffer() {
+    void clearZBuffer() {
         for (int i = 0; i < z_buff.length; i++)
             z_buff[i] = Float.NEGATIVE_INFINITY;
     }
     
-    public void drawZBuffer(Graphics g) {
+    void drawZBuffer(Graphics g) {
         if (w < g.getWidth() || h < g.getHeight())
             return;
         float min = Float.POSITIVE_INFINITY, max = Float.NEGATIVE_INFINITY;
@@ -99,13 +112,13 @@ public final class Rasterizer3D {
         }
     }
     
-    public void strokeTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
+    void strokeTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
         line(x1, y1, z1, x2, y2, z2);
         line(x2, y2, z2, x3, y3, z3);
         line(x3, y3, z3, x1, y1, z1);
     }
     
-    public void fillTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
+    void fillTriangle(int x1, int y1, float z1, int x2, int y2, float z2, int x3, int y3, float z3) {
         code1 = code(x1, y1);
         code2 = code(x2, y2);
         code3 = code(x3, y3);
@@ -143,7 +156,7 @@ public final class Rasterizer3D {
         }
     }
     
-    public void fillTriangleInterpolateColor(
+    void fillTriangleInterpolateColor(
             int x1, int y1, float z1, float r1, float g1, float b1, 
             int x2, int y2, float z2, float r2, float g2, float b2,
             int x3, int y3, float z3, float r3, float g3, float b3) {
@@ -202,7 +215,7 @@ public final class Rasterizer3D {
         }
     }
     
-    public void fillTexturedTriangle(int x1, int y1, float z1, float u1, float v1, int x2, int y2, float z2, float u2, float v2, int x3, int y3, float z3, float u3, float v3, Bitmap texture, boolean modulate) {
+    void fillTexturedTriangle(int x1, int y1, float z1, float u1, float v1, int x2, int y2, float z2, float u2, float v2, int x3, int y3, float z3, float u3, float v3, Bitmap texture, boolean modulate) {
         this.tex = texture;
         this.modulate = modulate;
         code1 = code(x1, y1);
@@ -254,7 +267,7 @@ public final class Rasterizer3D {
         }
     }
     
-    public void fillTexturedTriangleInterpolateColor(int x1, int y1, float z1, float u1, float v1, float r1, float g1, float b1, 
+    void fillTexturedTriangleInterpolateColor(int x1, int y1, float z1, float u1, float v1, float r1, float g1, float b1, 
                                                      int x2, int y2, float z2, float u2, float v2, float r2, float g2, float b2,
                                                      int x3, int y3, float z3, float u3, float v3, float r3, float g3, float b3, 
                                                      Bitmap texture) {
@@ -1360,7 +1373,7 @@ public final class Rasterizer3D {
         return false;
     }
     
-    public void line(int x1, int y1, float z1, int x2, int y2, float z2) {
+    void line(int x1, int y1, float z1, int x2, int y2, float z2) {
         clip(x1, y1, x2, y2);
         float z1_inv = 1f / z1;
         float z2_inv = 1f / z2;
@@ -1729,6 +1742,7 @@ public final class Rasterizer3D {
         float u, v;
         
         float r, g, b;
+        float nx, ny, nz;
         
         double angle;
         boolean angle_calc;

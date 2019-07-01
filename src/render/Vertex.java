@@ -6,8 +6,8 @@ package render;
  */
 public interface Vertex {
 
-    Vector4f pos();
-    Vector4f norm();
+    Vector3f pos();
+    Vector3f norm();
     
     boolean lighted();
     

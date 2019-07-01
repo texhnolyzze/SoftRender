@@ -1,6 +1,6 @@
 package render;
 
-import java.util.Random;
+import render.Vector3f.vec3;
 
 /**
  *
@@ -106,6 +106,35 @@ public final class MathUtils {
         
     static int round_fixed_16x16(int fixed) {
         return (fixed + (1 << 15)) >>> 16;
+    }
+    
+    static boolean ray_tri_intersection(vec3 ray_pos, vec3 ray_dir, vec3 v0, vec3 v1, vec3 v2, vec3 dest) {
+        float b1 = ray_pos.x - v0.x, b2 = ray_pos.y - v0.y, b3 = ray_pos.z - v0.z;
+        float v0v1x = v1.x - v0.x, v0v1y = v1.y - v0.y, v0v1z = v1.z - v0.z;
+        float v0v2x = v2.x - v0.x, v0v2y = v2.y - v0.y, v0v2z = v2.z - v0.z;
+        float det = v0v1x * v0v2y * -ray_dir.z + -ray_dir.x * v0v1y * v0v2z + v0v2x * -ray_dir.y * v0v1z - -ray_dir.x * v0v2y * v0v1z - v0v1x * -ray_dir.y * v0v2z - v0v2x * v0v1y * -ray_dir.z;
+        if (det != 0.0f) {
+            det = 1f / det;
+            float det1 = b1 * v0v2y * -ray_dir.z + -ray_dir.x * b2 * v0v2z + v0v2x * -ray_dir.y * b3 - -ray_dir.x * v0v2y * b3 - b1 * -ray_dir.y * v0v2z - v0v2x * b2 * -ray_dir.z;
+            float u = det1 * det;
+            if (u >= 0f && u <= 1f) {
+                float det2 = v0v1x * b2 * -ray_dir.z + -ray_dir.x * v0v1y * b3 + b1 * -ray_dir.y * v0v1z - -ray_dir.x * b2 * v0v1z - v0v1x * -ray_dir.y * b3 - b1 * v0v1y * -ray_dir.z;
+                float v = det2 * det;
+                if (v >= 0f && v <= 1f && u + v <= 1f) {
+                    float det3 = v0v1x * v0v2y * b3 + b1 * v0v1y * v0v2z + v0v2x * b2 * v0v1z - b1 * v0v2y * v0v1z - v0v1x * b2 * v0v2z - v0v2x * v0v1y * b3;
+                    float k = det3 * det;
+                    if (k >= 0f) {
+                        dest.set(ray_dir.x * k, ray_dir.y * k, ray_dir.z * k);
+                        return true;
+                    }
+                }
+            }   
+        }
+        return false;
+    }
+    
+    static float ns_to_ms(float ns) {
+        return ns / 1000000;
     }
     
 }
